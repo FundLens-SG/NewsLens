@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0F172A">
+<title>Advisory News Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0C1220;--sf:#151E30;--cd:#1A2540;--ch:#1F2D4A;--ac:#F96167;--ac2:#4F46E5;--grn:#25D366;--tx:#E8ECF4;--t2:#8896B0;--t3:#5A6A85;--bd:#253042;--r:10px;--st:env(safe-area-inset-top,0px);--sb:env(safe-area-inset-bottom,0px)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--bg);color:var(--tx);min-height:100dvh;padding-top:var(--st);padding-bottom:var(--sb)}
+button{cursor:pointer;border:none;font-family:inherit}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+
+.hdr{background:linear-gradient(180deg,#111B2E,var(--bg));padding:16px 14px 12px;position:sticky;top:0;z-index:50;border-bottom:1px solid var(--bd)}
+.hdr-t{font-size:20px;font-weight:700;letter-spacing:-0.02em}
+.hdr-s{font-size:10px;color:var(--t3);margin-top:1px}
+
+.chip{background:var(--sf);color:var(--t2);border:1px solid var(--bd);border-radius:16px;padding:5px 11px;font-size:10.5px;font-weight:600;transition:0.1s}
+.chip.on{background:var(--ac2);color:#FFF;border-color:var(--ac2)}
+.chip.sg{background:#DC2626;border-color:#DC2626;color:#FFF}
+.chip:active{transform:scale(0.96)}
+
+.tabs{display:flex;overflow-x:auto;background:var(--sf);border-bottom:1px solid var(--bd);position:sticky;top:68px;z-index:40}
+.tab{flex:none;padding:10px 12px;font-size:11.5px;font-weight:600;color:var(--t3);background:none;text-align:center;border-bottom:2px solid transparent}
+.tab.on{color:var(--ac2);border-bottom-color:var(--ac2)}
+
+.card{background:var(--cd);border:1px solid var(--bd);border-radius:var(--r);padding:11px 13px;margin-bottom:6px;position:relative}
+.card.sel{border-color:var(--ac2);background:#1a1f3a}
+.card:active{background:var(--ch)}
+
+.badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:8.5px;font-weight:700;white-space:nowrap}
+.b-high{background:#3D1519;color:#F87171}.b-med{background:#3D2E0F;color:#FBBF24}.b-low{background:#0F2E1A;color:#4ADE80}
+.b-ret{background:#2E1065;color:#A78BFA}.b-yp{background:#0C4A6E;color:#38BDF8}.b-hnw{background:#451A03;color:#FBBF24}.b-gen{background:#1E293B;color:#94A3B8}
+.b-src{background:#172554;color:#60A5FA}
+
+.act-bar{position:sticky;bottom:0;background:var(--sf);border-top:1px solid var(--bd);padding:10px 14px calc(10px + var(--sb));display:flex;align-items:center;gap:6px;flex-wrap:wrap;z-index:40}
+.abtn{padding:8px 12px;border-radius:8px;font-size:11px;font-weight:700;color:#FFF;display:flex;align-items:center;gap:3px}
+.abtn:active{transform:scale(0.96)}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--sf);border-radius:14px 14px 0 0;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;padding:18px 16px calc(18px + var(--sb))}
+.sheet-handle{width:36px;height:4px;background:var(--bd);border-radius:2px;margin:0 auto 14px}
+.finput{width:100%;padding:9px 11px;background:var(--cd);border:1px solid var(--bd);border-radius:7px;color:var(--tx);font-size:13px;outline:none;margin-bottom:12px}
+.finput:focus{border-color:var(--ac2)}
+.flabel{font-size:11px;font-weight:600;color:var(--t2);margin-bottom:5px}
+.fhint{font-size:10px;color:var(--t3);margin-top:-8px;margin-bottom:12px;line-height:1.4}
+
+.spinner{width:18px;height:18px;border:2.5px solid var(--ac2);border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.wa-bubble{background:#1A3A24;border-radius:0 10px 10px 10px;padding:10px 12px;font-size:13px;line-height:1.6;color:#D4F5DD;white-space:pre-wrap;word-break:break-word}
+.email-box{background:var(--cd);border:1px solid var(--bd);border-radius:var(--r);padding:14px;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-word}
+
+.empty{text-align:center;padding:30px 16px;color:var(--t3)}
+.empty-ico{font-size:30px;margin-bottom:6px}
+.empty-t{font-size:13px;font-weight:600}
+.empty-s{font-size:10px;margin-top:3px;color:var(--t3)}
+
+.seg-row{display:flex;gap:4px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px}
+.seg-pill{padding:3px 9px;border-radius:10px;font-size:10px;font-weight:600;background:var(--cd);color:var(--t2);border:1px solid var(--bd);white-space:nowrap}
+.seg-pill.on{color:#FFF}
+
+.prog-bar{margin-top:5px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden}
+.prog-fill{height:4px;border-radius:2px;transition:width 0.4s}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ── Storage ── */
+function gS(k,d){try{return localStorage.getItem("anh_"+k)||d}catch(e){return d}}
+function sS(k,v){try{localStorage.setItem("anh_"+k,v)}catch(e){}}
+
+/* ── State ── */
+var S={
+  gemKey:gS("gemKey",""),claudeKey:gS("claudeKey",""),advName:gS("advName",""),
+  aC:["markets","sg_general","sg_cpf"],
+  news:{},sel:[],ld:false,phase:"",fErr:"",tab:"news",
+  tone:"professional",catF:"all",segF:"all",
+  showSettings:!gS("gemKey",""),
+  comm:"",gC:false,waM:"",gW:false,emM:"",gE:false,gP:false,gX:false,oE:"",
+  timer:0,copied:false
+};
+var tmrI=null;
+function startT(){S.timer=0;clearInterval(tmrI);tmrI=setInterval(function(){S.timer++;R();},1000)}
+function stopT(){clearInterval(tmrI);S.timer=0}
+
+var CATS=[
+{id:"markets",label:"Markets & Economy",emoji:"\u{1F4CA}",g:"global"},
+{id:"geopolitics",label:"Geopolitics & War",emoji:"\u{1F30D}",g:"global"},
+{id:"central_banks",label:"Central Banks",emoji:"\u{1F3E6}",g:"global"},
+{id:"commodities",label:"Commodities",emoji:"\u{1F6E2}\uFE0F",g:"global"},
+{id:"crypto",label:"Crypto & Digital",emoji:"\u{20BF}",g:"global"},
+{id:"regulations",label:"Regulations",emoji:"\u2696\uFE0F",g:"global"},
+{id:"sg_general",label:"Singapore News",emoji:"\u{1F1F8}\u{1F1EC}",g:"sg"},
+{id:"sg_finance",label:"SG Finance & MAS",emoji:"\u{1F3DB}\uFE0F",g:"sg"},
+{id:"sg_insurance",label:"SG Insurance",emoji:"\u{1F6E1}\uFE0F",g:"sg"},
+{id:"sg_healthcare",label:"SG Healthcare",emoji:"\u{1F3E5}",g:"sg"},
+{id:"sg_cpf",label:"CPF, SRS & Gov",emoji:"\u{1F3E2}",g:"sg"},
+{id:"sg_sti",label:"SGX & STI",emoji:"\u{1F4C8}",g:"sg"}
+];
+var TONES=[{id:"professional",lb:"Pro"},{id:"casual",lb:"Friendly"},{id:"urgent",lb:"Urgent"}];
+var SEGS=[{id:"all",lb:"All",c:"#64748B"},{id:"retirees",lb:"Retirees",c:"#8B5CF6"},{id:"young_professionals",lb:"Young Pro",c:"#0EA5E9"},{id:"hnw",lb:"HNW",c:"#F59E0B"},{id:"general",lb:"General",c:"#6B7280"}];
+
+function cleanJ(s){if(!s)return"";var f=String.fromCharCode(96,96,96);var o=s;while(o.indexOf(f+"json")!==-1)o=o.replace(f+"json","");while(o.indexOf(f)!==-1)o=o.replace(f,"");return o.trim()}
+function pObj(r){if(!r)return null;var c=cleanJ(r);try{return JSON.parse(c)}catch(e){}var a=c.indexOf("{"),b=c.lastIndexOf("}");if(a!==-1&&b>a){try{return JSON.parse(c.slice(a,b+1))}catch(e){}}return null}
+function dl(ms){return new Promise(function(r){setTimeout(r,ms)})}
+
+/* ── GEMINI: Fast news fetch with Google Search grounding ── */
+async function gemFetch(catIds){
+  if(!S.gemKey)throw new Error("No Gemini API key. Tap the gear icon to add it.");
+  var labels=catIds.map(function(id){var c=CATS.find(function(x){return x.id===id});return c?c.label:id});
+  var catStr=catIds.map(function(id,i){return'"'+id+'": '+labels[i]}).join(", ");
+
+  var prompt="Find the latest news from the past 24 hours for these categories: "+catStr+"\n\nUse ONLY reputable sources: Reuters, Bloomberg, FT, WSJ, AP, BBC, CNBC, Straits Times, Business Times, CNA, TODAY, MAS, CPF Board, MOH, SGX.\n\nReturn ONLY a JSON object. Keys = category ids, values = arrays of 2-3 news items.\n\nFormat:\n{\"markets\":[{\"title\":\"headline\",\"summary\":\"1 sentence\",\"source\":\"Reuters\",\"impact\":\"high\",\"key_figures\":\"data\",\"audience\":\"general\"}]}\n\naudience: retirees|young_professionals|hnw|general\nimpact: high|medium|low\n\n2-3 items per category. Short summaries. ONLY output JSON.";
+
+  var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+S.gemKey,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      contents:[{role:"user",parts:[{text:prompt}]}],
+      tools:[{google_search:{}}]
+    })
+  });
+  if(!res.ok){var et="";try{et=await res.text()}catch(x){}throw new Error("Gemini "+res.status+": "+et.slice(0,150))}
+  var data=await res.json();
+  if(!data.candidates||!data.candidates[0])throw new Error("Gemini returned no candidates");
+  var parts=data.candidates[0].content&&data.candidates[0].content.parts;
+  if(!parts)throw new Error("Gemini: no content parts");
+  var txt=parts.map(function(p){return p.text||""}).join("\n");
+  var parsed=pObj(txt);
+  if(!parsed)throw new Error("Could not parse Gemini response. Preview: "+txt.slice(0,200));
+  return parsed;
+}
+
+/* ── CLAUDE: Content processing ── */
+async function claudeCall(prompt,tms){
+  if(!S.claudeKey)throw new Error("No Claude API key. Tap the gear icon to add it.");
+  var timeout=tms||60000;
+  var ctrl=new AbortController();
+  var tmr=setTimeout(function(){ctrl.abort()},timeout);
+  try{
+    var res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","x-api-key":S.claudeKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:4096,messages:[{role:"user",content:prompt}]}),
+      signal:ctrl.signal
+    });
+    clearTimeout(tmr);
+    if(!res.ok){var et="";try{et=await res.text()}catch(x){}throw new Error("Claude "+res.status+": "+et.slice(0,150))}
+    var data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    var parts=[];for(var i=0;i<data.content.length;i++){if(data.content[i].type==="text")parts.push(data.content[i].text)}
+    return parts.join("\n");
+  }catch(err){clearTimeout(tmr);if(err.name==="AbortError")throw new Error("Claude timed out");throw err}
+}
+
+async function mkComm(arts,nm){return claudeCall("You are "+JSON.stringify(nm||"Advisor")+", SG financial advisor. Daily market commentary.\n\nArticles: "+JSON.stringify(arts)+"\n\nWarm greeting+date, 3-4 paragraphs (global, SG, meaning, watch), plain English, numbers, 250-350 words, disclaimer. Plain text only.")}
+async function mkWA(arts,tone,nm){return claudeCall("You are "+JSON.stringify(nm||"Advisor")+", SG advisor. WhatsApp broadcast. Tone: "+tone+".\n\nArticles: "+JSON.stringify(arts)+"\n\nGreeting+date, emojis sparingly, *bold*, 1-2 lines each, source, [For retirees]/[All], disclaimer, under 1500 chars. Plain text.")}
+async function mkEml(arts,nm){return claudeCall("You are "+JSON.stringify(nm||"Advisor")+", SG advisor. Email newsletter.\n\nArticles: "+JSON.stringify(arts)+"\n\nSUBJECT: [line]\\n---\\n[body]. Greeting, items heading+summary+source+tag, What This Means section, sign-off, disclaimer. 400 words. Plain text.")}
+async function mkPdf(arts,nm){var r=await claudeCall("JSON for 1-page briefing. ONLY JSON.\n\nArticles: "+JSON.stringify(arts)+"\n\n{\"title\":\"Daily Market Briefing\",\"date\":\"...\",\"advisor\":\""+( nm||"Advisor")+"\",\"market_summary\":\"2 sentences\",\"items\":[{\"title\":\"...\",\"summary\":\"1 sentence\",\"source\":\"...\",\"impact\":\"high\",\"audience\":\"general\"}],\"takeaways\":[\"...\"],\"disclaimer\":\"For informational purposes only.\"}");return pObj(r)}
+async function mkPptx(arts){var r=await claudeCall("JSON for PowerPoint. ONLY JSON.\n\nArticles: "+JSON.stringify(arts)+"\n\n{\"title\":\"...\",\"subtitle\":\"...\",\"slides\":[{\"title\":\"...\",\"bullets\":[\"...\"],\"impact\":\"high\",\"data_highlight\":\"stat\",\"source\":\"...\"}],\"summary_slide\":{\"title\":\"Key Takeaways\",\"bullets\":[\"...\"]},\"disclaimer\":\"For informational purposes only.\"}");return pObj(r)}
+
+function openPdf(ct){
+  var ic={high:"#DC2626",medium:"#D97706",low:"#059669"};var al={retirees:"Retirees",young_professionals:"Young Pro",hnw:"HNW",general:"All"};
+  var ih=(ct.items||[]).map(function(it){return'<div style="margin-bottom:8px;padding:7px 9px;background:#F8FAFC;border-left:3px solid '+(ic[it.impact]||"#999")+';border-radius:0 4px 4px 0"><b style="font-size:12px">'+it.title+'</b><div style="font-size:11px;color:#475569;margin-top:2px">'+it.summary+'</div><div style="font-size:9px;color:#64748B;margin-top:3px">'+it.source+' | '+(al[it.audience]||"All")+'</div></div>'}).join("");
+  var th=(ct.takeaways||[]).map(function(t){return'<li style="font-size:11px;margin-bottom:3px">'+t+'</li>'}).join("");
+  var h='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:A4;margin:15mm}body{font-family:Georgia,serif;padding:20px;color:#1E293B}</style></head><body><div style="border-bottom:2px solid #1E2761;padding-bottom:8px;margin-bottom:10px;display:flex;justify-content:space-between"><span style="font-size:20px;font-weight:700;color:#1E2761">'+(ct.title||"Briefing")+'</span><span style="font-size:11px;color:#64748B">'+(ct.date||"")+'</span></div><div style="font-size:10px;color:#64748B;margin-bottom:8px">By '+(ct.advisor||"")+'</div><div style="background:#1E2761;color:#FFF;padding:10px;border-radius:6px;margin-bottom:12px;font-size:12px;line-height:1.5">'+(ct.market_summary||"")+'</div><h2 style="font-size:14px;color:#1E2761;border-bottom:1px solid #E2E8F0;padding-bottom:4px">Key Developments</h2>'+ih+'<h2 style="font-size:14px;color:#1E2761;border-bottom:1px solid #E2E8F0;padding-bottom:4px">Takeaways</h2><ul style="padding-left:16px;margin:0">'+th+'</ul><div style="margin-top:12px;border-top:1px solid #E2E8F0;padding-top:6px;font-size:9px;color:#94A3B8;font-style:italic">'+(ct.disclaimer||"")+'</div></body></html>';
+  var w=window.open("","_blank");if(w){w.document.write(h);w.document.close();setTimeout(function(){w.print()},500)}
+}
+
+async function buildPptx(ct){
+  if(!window.PptxGenJS)await new Promise(function(rs,rj){var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";s.onload=rs;s.onerror=function(){rj(new Error("Lib fail"))};document.head.appendChild(s)});
+  var pr=new PptxGenJS();pr.layout="LAYOUT_16x9";var P="1E2761",SC="CADCFC",A="F96167",D="0F1535",L="F8F9FC",M="64748B";
+  var ms=function(){return{type:"outer",blur:6,offset:2,angle:135,color:"000000",opacity:0.15}};
+  var s1=pr.addSlide();s1.background={color:D};s1.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.08,fill:{color:A}});
+  s1.addText(ct.title||"Market Brief",{x:0.8,y:1.2,w:8.4,h:1.5,fontSize:36,fontFace:"Georgia",color:"FFFFFF",bold:true,margin:0});
+  s1.addText(ct.subtitle||new Date().toLocaleDateString(),{x:0.8,y:2.8,w:8.4,h:0.8,fontSize:18,fontFace:"Calibri",color:SC,margin:0});
+  var ic={high:A,medium:"F59E0B",low:"10B981"};
+  (ct.slides||[]).forEach(function(sl,i){var sd=pr.addSlide();sd.background={color:L};sd.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.06,fill:{color:P}});
+  sd.addShape(pr.shapes.RECTANGLE,{x:8.2,y:0.4,w:1.3,h:0.35,fill:{color:ic[sl.impact]||M},shadow:ms()});
+  sd.addText((sl.impact||"").toUpperCase(),{x:8.2,y:0.4,w:1.3,h:0.35,fontSize:10,fontFace:"Calibri",color:"FFFFFF",bold:true,align:"center",valign:"middle",margin:0});
+  sd.addText(String(i+1).padStart(2,"0"),{x:0.5,y:0.35,w:0.6,h:0.5,fontSize:28,fontFace:"Georgia",color:P,bold:true,margin:0});
+  sd.addText(sl.title,{x:1.2,y:0.35,w:6.8,h:0.6,fontSize:22,fontFace:"Georgia",color:P,bold:true,margin:0});
+  if(sl.data_highlight){sd.addShape(pr.shapes.RECTANGLE,{x:0.5,y:1.3,w:9,h:0.9,fill:{color:"FFFFFF"},shadow:ms()});sd.addText(sl.data_highlight,{x:0.8,y:1.3,w:8.5,h:0.9,fontSize:16,fontFace:"Calibri",color:P,bold:true,valign:"middle",margin:0})}
+  var by=sl.data_highlight?2.5:1.3;var bi=(sl.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<sl.bullets.length-1,color:"334155",fontSize:14,fontFace:"Calibri"}}});
+  if(bi.length)sd.addText(bi,{x:1.2,y:by,w:7.6,h:2.5,paraSpaceAfter:8});
+  sd.addText(sl.source?"Source: "+sl.source:"",{x:0.5,y:5.15,w:9,h:0.35,fontSize:9,fontFace:"Calibri",color:M,italic:true,align:"right",margin:0})});
+  if(ct.summary_slide){var ss=pr.addSlide();ss.background={color:P};ss.addText(ct.summary_slide.title||"Key Takeaways",{x:0.8,y:0.5,w:8.4,h:0.8,fontSize:30,fontFace:"Georgia",color:"FFFFFF",bold:true,margin:0});
+  var si=(ct.summary_slide.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<ct.summary_slide.bullets.length-1,color:SC,fontSize:16,fontFace:"Calibri"}}});
+  if(si.length)ss.addText(si,{x:0.8,y:1.8,w:8.4,h:2.8,paraSpaceAfter:12})}
+  var ds=pr.addSlide();ds.background={color:D};ds.addText(ct.disclaimer||"For informational purposes only.",{x:0.8,y:2,w:8.4,h:2,fontSize:13,fontFace:"Calibri",color:SC,lineSpacingMultiple:1.4,margin:0});
+  return pr;
+}
+
+/* ── Actions ── */
+async function doFetch(){
+  S.ld=true;S.fErr="";S.news={};R();startT();
+  var gIds=S.aC.filter(function(id){return CATS.find(function(c){return c.id===id}).g==="global"});
+  var sIds=S.aC.filter(function(id){return CATS.find(function(c){return c.id===id}).g==="sg"});
+
+  if(gIds.length){
+    S.phase="global";R();
+    try{var g=await gemFetch(gIds);gIds.forEach(function(id){S.news[id]=(g[id]&&Array.isArray(g[id]))?g[id]:[]});R()}
+    catch(e){S.fErr="Global: "+e.message;R()}
+  }
+  if(gIds.length&&sIds.length){S.phase="pause";R();await dl(1500)}
+  if(sIds.length){
+    S.phase="sg";R();
+    try{var sg=await gemFetch(sIds);sIds.forEach(function(id){S.news[id]=(sg[id]&&Array.isArray(sg[id]))?sg[id]:[]});R()}
+    catch(e){S.fErr=(S.fErr?S.fErr+" | ":"")+"SG: "+e.message;R()}
+  }
+  S.phase="";S.ld=false;stopT();R();
+}
+
+function togC(id){var i=S.aC.indexOf(id);if(i>=0)S.aC.splice(i,1);else S.aC.push(id);R()}
+function togA(a){var i=S.sel.findIndex(function(x){return x.title===a.title});if(i>=0)S.sel.splice(i,1);else S.sel.push(a);R()}
+function cpTxt(t){navigator.clipboard.writeText(t);S.copied=true;R();setTimeout(function(){S.copied=false;R()},2000)}
+
+async function doCm(){if(!S.sel.length)return;S.gC=true;S.oE="";S.tab="commentary";R();startT();try{S.comm=await mkComm(S.sel,S.advName)}catch(e){S.oE=e.message}S.gC=false;stopT();R()}
+async function doWA(){if(!S.sel.length)return;S.gW=true;S.oE="";S.tab="whatsapp";R();startT();try{S.waM=await mkWA(S.sel,S.tone,S.advName)}catch(e){S.oE=e.message}S.gW=false;stopT();R()}
+async function doEm(){if(!S.sel.length)return;S.gE=true;S.oE="";S.tab="email";R();startT();try{S.emM=await mkEml(S.sel,S.advName)}catch(e){S.oE=e.message}S.gE=false;stopT();R()}
+async function doPf(){if(!S.sel.length)return;S.gP=true;S.oE="";S.tab="pdf";R();startT();try{var c=await mkPdf(S.sel,S.advName);if(!c)throw new Error("No content");openPdf(c)}catch(e){S.oE=e.message}S.gP=false;stopT();R()}
+async function doPx(){if(!S.sel.length)return;S.gX=true;S.oE="";S.tab="pptx";R();startT();try{var c=await mkPptx(S.sel);if(!c)throw new Error("No content");var p=await buildPptx(c);await p.writeFile({fileName:"Brief_"+new Date().toISOString().slice(0,10)+".pptx"})}catch(e){S.oE=e.message}S.gX=false;stopT();R()}
+
+/* ── Render ── */
+function h(tag,attrs){var el=document.createElement(tag);if(attrs)Object.keys(attrs).forEach(function(k){if(k==="onclick"||k==="oninput"||k==="onchange")el[k]=attrs[k];else if(k==="className")el.className=attrs[k];else if(k==="innerHTML")el.innerHTML=attrs[k];else if(k==="textContent")el.textContent=attrs[k];else el.setAttribute(k,attrs[k])});var children=Array.prototype.slice.call(arguments,2);children.forEach(function(c){if(c==null)return;if(typeof c==="string")el.appendChild(document.createTextNode(c));else if(Array.isArray(c))c.forEach(function(x){if(x)el.appendChild(x)});else el.appendChild(c)});return el}
+
+function R(){
+  var app=document.getElementById("app");
+  var allA=S.aC.reduce(function(a,id){return a.concat(S.news[id]||[]);},[]);
+  var fltA=S.segF==="all"?allA:allA.filter(function(a){return a.audience===S.segF});
+  var vCats=S.catF==="global"?CATS.filter(function(c){return c.g==="global"}):S.catF==="sg"?CATS.filter(function(c){return c.g==="sg"}):CATS;
+  var anyG=S.gC||S.gW||S.gE||S.gP||S.gX;
+  var phLbl=S.phase==="global"?"\u{1F30D} Fetching global...":S.phase==="sg"?"\u{1F1F8}\u{1F1EC} Fetching SG...":S.phase==="pause"?"Brief pause...":"Searching...";
+  var timerTxt=S.timer>0?" ("+S.timer+"s)":"";
+
+  var root=h("div",{});
+
+  /* ── SETTINGS MODAL ── */
+  if(S.showSettings){
+    var overlay=h("div",{className:"modal",onclick:function(e){if(e.target===overlay){S.showSettings=false;R()}}});
+    var sheet=h("div",{className:"sheet"});
+    sheet.appendChild(h("div",{className:"sheet-handle"}));
+    sheet.appendChild(h("div",{textContent:"Setup",style:"font-size:18px;font-weight:700;margin-bottom:14px"}));
+
+    sheet.appendChild(h("div",{className:"flabel",textContent:"Gemini API Key (for fast news search)"}));
+    var gInput=h("input",{className:"finput",type:"password",value:S.gemKey,placeholder:"AIza...",oninput:function(e){S.gemKey=e.target.value;sS("gemKey",e.target.value)}});
+    sheet.appendChild(gInput);
+    sheet.appendChild(h("div",{className:"fhint",textContent:"Free from aistudio.google.com. Powers fast Google-grounded search."}));
+
+    sheet.appendChild(h("div",{className:"flabel",textContent:"Claude API Key (for content generation)"}));
+    var cInput=h("input",{className:"finput",type:"password",value:S.claudeKey,placeholder:"sk-ant-...",oninput:function(e){S.claudeKey=e.target.value;sS("claudeKey",e.target.value)}});
+    sheet.appendChild(cInput);
+    sheet.appendChild(h("div",{className:"fhint",textContent:"From console.anthropic.com. Powers WhatsApp, email, PDF, PPTX generation."}));
+
+    sheet.appendChild(h("div",{className:"flabel",textContent:"Your Name (for broadcasts)"}));
+    var nInput=h("input",{className:"finput",value:S.advName,placeholder:"Your name",oninput:function(e){S.advName=e.target.value;sS("advName",e.target.value)}});
+    sheet.appendChild(nInput);
+
+    var saveBtn=h("button",{style:"width:100%;padding:12px;background:#4F46E5;color:#FFF;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer",onclick:function(){S.showSettings=false;R()}},S.gemKey&&S.claudeKey?"Save & Start":"Save");
+    sheet.appendChild(saveBtn);
+    overlay.appendChild(sheet);
+    root.appendChild(overlay);
+  }
+
+  /* ── HEADER ── */
+  var hdr=h("div",{className:"hdr"});
+  var hdrRow=h("div",{style:"display:flex;align-items:center;justify-content:space-between;gap:6px"});
+  hdrRow.appendChild(h("div",{},h("div",{className:"hdr-t",textContent:"Advisory News Hub"}),h("div",{className:"hdr-s",innerHTML:"\u26A1 Gemini search + Claude processing"})));
+  var gearBtn=h("button",{style:"background:"+("var(--sf)")+";border:1px solid var(--bd);border-radius:8px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;color:var(--t2);font-size:16px",onclick:function(){S.showSettings=true;R()},textContent:"\u2699\uFE0F"});
+  hdrRow.appendChild(gearBtn);
+  hdr.appendChild(hdrRow);
+
+  /* Cat filter tabs */
+  var cfRow=h("div",{style:"display:flex;gap:3px;margin-top:10px;margin-bottom:5px"});
+  [{id:"all",lb:"All"},{id:"global",lb:"\u{1F30D} Global"},{id:"sg",lb:"\u{1F1F8}\u{1F1EC} SG"}].forEach(function(f){
+    cfRow.appendChild(h("button",{style:"background:"+(S.catF===f.id?"#FFF":"rgba(255,255,255,0.08)")+";color:"+(S.catF===f.id?"#1E293B":"#94A3B8")+";border:none;border-radius:5px;padding:3px 9px;font-size:10.5px;font-weight:700;cursor:pointer",onclick:function(){S.catF=f.id;R()}},f.lb));
+  });
+  hdr.appendChild(cfRow);
+
+  /* Chips */
+  var chipRow=h("div",{style:"display:flex;flex-wrap:wrap;gap:4px"});
+  vCats.forEach(function(c){
+    var on=S.aC.indexOf(c.id)>=0;
+    var has=(S.news[c.id]||[]).length>0;
+    var cls="chip"+(on?(c.g==="sg"?" sg":" on"):"");
+    var chip=h("button",{className:cls,onclick:function(){togC(c.id)}});
+    if(has)chip.appendChild(h("span",{style:"width:6px;height:6px;border-radius:3px;background:#22C55E;display:inline-block;margin-right:3px"}));
+    chip.appendChild(document.createTextNode(c.emoji+" "+c.label));
+    chipRow.appendChild(chip);
+  });
+  hdr.appendChild(chipRow);
+
+  /* Fetch button */
+  var fetchBtn=h("button",{style:"margin-top:10px;background:"+(S.ld?"#475569":"var(--ac)")+";color:#FFF;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:700;cursor:"+(S.ld?"default":"pointer")+";display:flex;align-items:center;gap:4px",onclick:S.ld?null:doFetch});
+  fetchBtn.textContent=S.ld?phLbl+timerTxt:"Fetch All ("+S.aC.length+")";
+  hdr.appendChild(fetchBtn);
+
+  if(S.ld){
+    var pBar=h("div",{className:"prog-bar"});
+    var pct=S.phase==="global"?"40%":S.phase==="pause"?"55%":S.phase==="sg"?"80%":"15%";
+    pBar.appendChild(h("div",{className:"prog-fill",style:"background:#22C55E;width:"+pct}));
+    hdr.appendChild(pBar);
+  }
+
+  var vRow=h("div",{style:"margin-top:6px;display:flex;align-items:center;gap:4px"});
+  vRow.appendChild(h("span",{style:"background:rgba(16,185,129,0.15);color:#34D399;padding:2px 5px;border-radius:3px;font-size:8.5px;font-weight:700",textContent:"\u2713 VERIFIED"}));
+  vRow.appendChild(h("span",{style:"font-size:9px;color:var(--t3)",textContent:"Reuters \u00B7 Bloomberg \u00B7 Straits Times \u00B7 CNA \u00B7 MAS"}));
+  hdr.appendChild(vRow);
+  root.appendChild(hdr);
+
+  /* ── TABS ── */
+  var tabBar=h("div",{className:"tabs"});
+  [{id:"news",lb:"News"+(allA.length?" ("+allA.length+")":"")},{id:"commentary",lb:"Brief"},{id:"whatsapp",lb:"WA"},{id:"email",lb:"Email"},{id:"pdf",lb:"PDF"},{id:"pptx",lb:"PPTX"}].forEach(function(t){
+    tabBar.appendChild(h("button",{className:"tab"+(S.tab===t.id?" on":""),onclick:function(){S.tab=t.id;R()}},t.lb));
+  });
+  root.appendChild(tabBar);
+
+  /* ── CONTENT ── */
+  var content=h("div",{style:"padding:12px 14px;max-width:860px;margin:0 auto"});
+
+  if(S.tab==="news"){
+    /* Error */
+    if(S.fErr){
+      var err=h("div",{style:"padding:10px 12px;background:#2A1215;border:1px solid #5C2020;border-radius:8px;margin-bottom:8px"});
+      err.appendChild(h("div",{style:"font-size:11px;font-weight:600;color:#F87171;word-break:break-word",textContent:"\u26A0\uFE0F "+S.fErr}));
+      err.appendChild(h("button",{style:"margin-top:6px;padding:4px 10px;background:#5C2020;color:#F87171;border:none;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer",onclick:doFetch,textContent:"Try Again"}));
+      content.appendChild(err);
+    }
+    /* Loading */
+    if(S.ld){
+      var ldBox=h("div",{style:"padding:14px;background:var(--cd);border-radius:10px;margin-bottom:8px;text-align:center"});
+      ldBox.appendChild(h("div",{className:"spinner"}));
+      ldBox.appendChild(h("div",{style:"font-size:12px;color:var(--t2)",textContent:phLbl+timerTxt}));
+      content.appendChild(ldBox);
+    }
+    /* Segment filter + controls */
+    if(allA.length>0){
+      var segRow=h("div",{className:"seg-row"});
+      SEGS.forEach(function(sg){
+        var ct=sg.id==="all"?allA.length:allA.filter(function(a){return a.audience===sg.id}).length;
+        segRow.appendChild(h("button",{className:"seg-pill"+(S.segF===sg.id?" on":""),style:S.segF===sg.id?"background:"+sg.c+";border-color:"+sg.c:"",onclick:function(){S.segF=sg.id;R()}},sg.lb+"("+ct+")"));
+      });
+      content.appendChild(segRow);
+
+      var ctrlRow=h("div",{style:"display:flex;align-items:center;gap:5px;margin-bottom:8px;flex-wrap:wrap"});
+      ctrlRow.appendChild(h("span",{style:"font-size:11px;color:var(--t2);font-weight:600"},S.sel.length+" sel"));
+      ctrlRow.appendChild(h("button",{style:"padding:3px 8px;background:var(--cd);color:var(--t2);border:1px solid var(--bd);border-radius:10px;font-size:10px;font-weight:600;cursor:pointer",onclick:function(){S.sel=fltA.slice();R()}},"\u2611 All"));
+      ctrlRow.appendChild(h("button",{style:"padding:3px 8px;background:var(--cd);color:var(--t2);border:1px solid var(--bd);border-radius:10px;font-size:10px;font-weight:600;cursor:pointer",onclick:function(){S.sel=[];R()}},"Clear"));
+      ctrlRow.appendChild(h("div",{style:"flex:1"}));
+      TONES.forEach(function(t){
+        ctrlRow.appendChild(h("button",{style:"padding:3px 8px;border-radius:10px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--bd);background:"+(S.tone===t.id?"var(--ac2)":"var(--cd)")+";color:"+(S.tone===t.id?"#FFF":"var(--t2)"),onclick:function(){S.tone=t.id;R()}},t.lb));
+      });
+      content.appendChild(ctrlRow);
+    }
+    /* Cards */
+    S.aC.forEach(function(catId){
+      var cat=CATS.find(function(c){return c.id===catId});
+      var items=S.news[catId]||[];
+      if(S.segF!=="all")items=items.filter(function(a){return a.audience===S.segF});
+      if(!items.length)return;
+      content.appendChild(h("div",{style:"font-size:12.5px;font-weight:700;color:var(--tx);margin-bottom:5px;margin-top:10px"},cat.emoji+" "+cat.label+" ("+items.length+")"));
+      items.forEach(function(it){
+        var sel=!!S.sel.find(function(a){return a.title===it.title});
+        var card=h("div",{className:"card"+(sel?" sel":""),onclick:function(){togA(it)}});
+        if(sel)card.appendChild(h("div",{style:"position:absolute;top:7px;right:10px;color:var(--ac2);font-weight:700",textContent:"\u2713"}));
+        var badges=h("div",{style:"display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap"});
+        var impCls=it.impact==="high"?"b-high":it.impact==="low"?"b-low":"b-med";
+        badges.appendChild(h("span",{className:"badge "+impCls},(it.impact||"").toUpperCase()));
+        var audCls=it.audience==="retirees"?"b-ret":it.audience==="young_professionals"?"b-yp":it.audience==="hnw"?"b-hnw":"b-gen";
+        var audLbl={retirees:"Retirees",young_professionals:"Young Pro",hnw:"HNW",general:"All"};
+        badges.appendChild(h("span",{className:"badge "+audCls},audLbl[it.audience]||"All"));
+        if(it.source)badges.appendChild(h("span",{className:"badge b-src"},it.source));
+        card.appendChild(badges);
+        card.appendChild(h("div",{style:"font-size:13px;font-weight:600;color:var(--tx);line-height:1.35;margin-bottom:3px"},it.title));
+        card.appendChild(h("div",{style:"font-size:11.5px;color:var(--t2);line-height:1.4"},it.summary));
+        if(it.key_figures)card.appendChild(h("div",{style:"margin-top:5px;padding:3px 7px;background:var(--sf);border-radius:4px;font-size:10.5px;color:var(--t2)"},"\u{1F4C8} "+it.key_figures));
+        content.appendChild(card);
+      });
+    });
+    /* Empty */
+    if(allA.length===0&&!S.ld&&!S.fErr){
+      var em=h("div",{className:"empty"});
+      em.appendChild(h("div",{className:"empty-ico",textContent:"\u{1F4F0}"}));
+      em.appendChild(h("div",{className:"empty-t",textContent:"Select categories and Fetch"}));
+      em.appendChild(h("div",{className:"empty-s",textContent:"\u26A1 Gemini search: ~5-10s per batch"}));
+      content.appendChild(em);
+    }
+    /* Action bar */
+    if(S.sel.length>0){
+      var bar=h("div",{className:"act-bar"});
+      bar.appendChild(h("span",{style:"font-size:11px;font-weight:600;color:var(--t2)"},S.sel.length+" articles"));
+      bar.appendChild(h("div",{style:"flex:1"}));
+      [{fn:doCm,bg:"#1E293B",lb:"\u{1F4AC} Brief"},{fn:doWA,bg:"#25D366",lb:"\u{1F4F1} WA"},{fn:doEm,bg:"#4F46E5",lb:"\u{1F4E7}"},{fn:doPf,bg:"#0EA5E9",lb:"\u{1F4C4}"},{fn:doPx,bg:"#B91C1C",lb:"\u{1F4CA}"}].forEach(function(b){
+        bar.appendChild(h("button",{className:"abtn",style:"background:"+b.bg,onclick:anyG?null:b.fn},b.lb));
+      });
+      content.appendChild(bar);
+    }
+  }
+
+  /* ── Output tabs ── */
+  function renderOutput(generating,errMsg,contentTxt,emptyEmoji,emptyTxt,isBubble){
+    if(generating){
+      var sp=h("div",{style:"text-align:center;padding:30px"});
+      sp.appendChild(h("div",{className:"spinner"}));
+      sp.appendChild(h("div",{style:"font-size:13px;font-weight:600;color:var(--t2)"},"Generating..."+timerTxt));
+      content.appendChild(sp);
+    }else if(errMsg){
+      content.appendChild(h("div",{style:"padding:10px;background:#2A1215;border:1px solid #5C2020;border-radius:8px;margin-bottom:8px;font-size:11px;color:#F87171"},errMsg));
+      content.appendChild(h("button",{className:"abtn",style:"background:#475569;margin-top:8px",onclick:function(){S.tab="news";R()}},"Back"));
+    }else if(contentTxt){
+      if(isBubble){
+        var waWrap=h("div",{style:"background:#0A1A10;border-radius:10px;padding:14px;margin-bottom:10px"});
+        waWrap.appendChild(h("div",{className:"wa-bubble",textContent:contentTxt}));
+        content.appendChild(waWrap);
+      }else{
+        content.appendChild(h("div",{className:"email-box",style:"margin-bottom:10px",textContent:contentTxt}));
+      }
+      var btnRow=h("div",{style:"display:flex;gap:8px"});
+      btnRow.appendChild(h("button",{style:"flex:1;padding:9px;background:var(--ac2);color:#FFF;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer",onclick:function(){cpTxt(contentTxt)}},S.copied?"\u2713 Copied!":"Copy"));
+      btnRow.appendChild(h("button",{style:"padding:9px 14px;background:#475569;color:#FFF;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer",onclick:function(){S.tab="news";R()}},"Back"));
+      content.appendChild(btnRow);
+    }else{
+      var em=h("div",{className:"empty"});
+      em.appendChild(h("div",{className:"empty-ico",textContent:emptyEmoji}));
+      em.appendChild(h("div",{className:"empty-t",textContent:emptyTxt}));
+      em.appendChild(h("div",{className:"empty-s",textContent:"Select articles, tap the button"}));
+      content.appendChild(em);
+    }
+  }
+
+  function renderFiletab(generating,errMsg,emptyEmoji,emptyTxt){
+    if(generating){var sp=h("div",{style:"text-align:center;padding:30px"});sp.appendChild(h("div",{className:"spinner"}));sp.appendChild(h("div",{style:"font-size:13px;font-weight:600;color:var(--t2)"},"Generating..."+timerTxt));content.appendChild(sp)}
+    else{if(errMsg)content.appendChild(h("div",{style:"padding:10px;background:#2A1215;border:1px solid #5C2020;border-radius:8px;margin-bottom:8px;font-size:11px;color:#F87171"},errMsg));
+    var em=h("div",{className:"empty"});em.appendChild(h("div",{className:"empty-ico",textContent:emptyEmoji}));em.appendChild(h("div",{className:"empty-t",textContent:emptyTxt}));content.appendChild(em)}
+    content.appendChild(h("button",{className:"abtn",style:"background:#475569;margin-top:10px",onclick:function(){S.tab="news";R()}},"Back"));
+  }
+
+  if(S.tab==="commentary")renderOutput(S.gC,S.oE,S.comm,"\u{1F4AC}","Select articles, tap \u{1F4AC} Brief",false);
+  if(S.tab==="whatsapp")renderOutput(S.gW,S.oE,S.waM,"\u{1F4F1}","Select articles, tap \u{1F4F1} WA",true);
+  if(S.tab==="email")renderOutput(S.gE,S.oE,S.emM,"\u{1F4E7}","Select articles, tap \u{1F4E7}",false);
+  if(S.tab==="pdf")renderFiletab(S.gP,S.oE,"\u{1F4C4}","Tap \u{1F4C4} to generate PDF");
+  if(S.tab==="pptx")renderFiletab(S.gX,S.oE,"\u{1F4CA}","Tap \u{1F4CA} to download PPTX");
+
+  root.appendChild(content);
+  app.innerHTML="";
+  app.appendChild(root);
+}
+
+/* Init */
+R();
+</script>
+</body>
+</html>
