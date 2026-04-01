@@ -121,7 +121,7 @@ async function gemFetch(catIds){
 
   var prompt="Find the latest news from the past 24 hours for these categories: "+catStr+"\n\nUse ONLY reputable sources: Reuters, Bloomberg, FT, WSJ, AP, BBC, CNBC, Straits Times, Business Times, CNA, TODAY, MAS, CPF Board, MOH, SGX.\n\nReturn ONLY a JSON object. Keys = category ids, values = arrays of 2-3 news items.\n\nFormat:\n{\"markets\":[{\"title\":\"headline\",\"summary\":\"1 sentence\",\"source\":\"Reuters\",\"impact\":\"high\",\"key_figures\":\"data\",\"audience\":\"general\"}]}\n\naudience: retirees|young_professionals|hnw|general\nimpact: high|medium|low\n\n2-3 items per category. Short summaries. ONLY output JSON.";
 
-  var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key="+S.gemKey,{
+  var res=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+S.gemKey,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
