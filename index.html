@@ -369,67 +369,67 @@ async function doNL(){
     var cL="";if(S.advPhone)cL+=S.advPhone;if(S.advEmail)cL+=(cL?" \u00B7 ":"")+S.advEmail;
     var iC={high:"#DC2626",medium:"#D97706",low:"#16A34A"};
 
-    var H='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}@page{size:A4;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}body{font-family:Georgia,"Times New Roman",serif;color:#1E293B;font-size:12px;line-height:1.6;background:#FFF}h1,h2,h3,h4,h5{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.25}.sf{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}.container{max-width:680px;margin:0 auto}</style></head><body>';
+    var H='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}@page{size:A4;margin:12mm 15mm}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-break{page-break-inside:avoid;break-inside:avoid}.page-break{page-break-before:always}}body{font-family:Georgia,"Times New Roman",serif;color:#1E293B;font-size:11.5px;line-height:1.55;background:#FFF;max-width:680px;margin:0 auto}h1,h2,h3,h4,h5{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.25}.sf{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}</style></head><body>';
 
     /* MASTHEAD */
-    H+='<div style="background:linear-gradient(135deg,#0F2847,#1A365D);padding:24px 32px;color:#FFF"><div class="container" style="display:flex;align-items:center;justify-content:space-between">'+
-    '<div style="display:flex;align-items:center;gap:14px">'+ph+'<div><h2 style="font-size:17px;font-weight:700;margin:0">'+(S.advName||"Advisor")+'</h2><div class="sf" style="font-size:10px;opacity:0.6;margin-top:2px">'+(S.advTitle||"")+(S.advCompany?" \u00B7 "+S.advCompany:"")+'</div></div></div>'+
-    '<div style="text-align:right"><div class="sf" style="font-size:8px;text-transform:uppercase;letter-spacing:2px;opacity:0.35">Private Client Briefing</div><h1 style="font-size:20px;font-weight:700;margin:4px 0 0">Market Intelligence</h1><div class="sf" style="font-size:9px;opacity:0.5;margin-top:2px">'+dt+'</div></div></div></div>';
-    H+='<div style="height:3px;background:linear-gradient(90deg,#2563EB,#0EA5E9,#06B6D4)"></div>';
+    H+='<div class="no-break" style="background:linear-gradient(135deg,#0F2847,#1A365D);padding:20px 24px;color:#FFF;border-radius:0 0 8px 8px"><div style="display:flex;align-items:center;justify-content:space-between">'+
+    '<div style="display:flex;align-items:center;gap:12px">'+ph+'<div><h2 style="font-size:16px;font-weight:700;margin:0">'+(S.advName||"Advisor")+'</h2><div class="sf" style="font-size:9.5px;opacity:0.6;margin-top:2px">'+(S.advTitle||"")+(S.advCompany?" \u00B7 "+S.advCompany:"")+'</div></div></div>'+
+    '<div style="text-align:right"><div class="sf" style="font-size:7.5px;text-transform:uppercase;letter-spacing:1.5px;opacity:0.35">Private Client Briefing</div><h1 style="font-size:18px;font-weight:700;margin:3px 0 0">Market Intelligence</h1><div class="sf" style="font-size:8.5px;opacity:0.5;margin-top:2px">'+dt+'</div></div></div></div>';
+    H+='<div style="height:3px;background:linear-gradient(90deg,#2563EB,#0EA5E9,#06B6D4);margin-bottom:16px"></div>';
 
     /* LEAD STORY */
-    H+='<div class="container" style="padding:24px 32px 20px;border-bottom:1px solid #E2E8F0">';
-    H+='<h4 class="sf" style="color:#2563EB;font-size:9px;text-transform:uppercase;letter-spacing:2px;margin:0 0 10px">THE BIG PICTURE</h4>';
-    H+='<h2 style="font-size:21px;font-weight:700;color:#0F172A;margin:0 0 10px">'+(ct.headline||"")+'</h2>';
-    H+='<p style="font-size:13px;color:#334155;line-height:1.7;margin:0">'+(ct.lead||"")+'</p></div>';
+    H+='<div class="no-break" style="padding:0 0 14px;border-bottom:1px solid #E2E8F0;margin-bottom:14px">';
+    H+='<h4 class="sf" style="color:#2563EB;font-size:8.5px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 8px">THE BIG PICTURE</h4>';
+    H+='<h2 style="font-size:19px;font-weight:700;color:#0F172A;margin:0 0 8px">'+(ct.headline||"")+'</h2>';
+    H+='<p style="font-size:11.5px;color:#334155;line-height:1.65;margin:0">'+(ct.lead||"")+'</p></div>';
 
     /* MARKET SNAPSHOT */
     if(ct.snap&&ct.snap.length){
-      H+='<div class="container" style="padding:16px 32px;border-bottom:1px solid #E2E8F0;background:#F8FAFC">';
-      H+='<div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">';
+      H+='<div class="no-break" style="padding:12px 0;border-bottom:1px solid #E2E8F0;margin-bottom:14px;background:#F8FAFC;border-radius:6px">';
+      H+='<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;padding:0 8px">';
       ct.snap.forEach(function(s){
         var col=s.dir==="up"?"#16A34A":s.dir==="down"?"#DC2626":"#64748B";
-        var arrow=s.dir==="up"?"\u25B2":s.dir==="down"?"\u25BC":"\u25AC";
-        H+='<div style="text-align:center;min-width:100px;padding:10px 16px;background:#FFF;border:1px solid #E2E8F0;border-radius:8px">';
-        H+='<div class="sf" style="font-size:22px;font-weight:800;color:'+col+'"><span style="font-size:13px">'+arrow+'</span> '+s.value+'</div>';
-        H+='<div class="sf" style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#94A3B8;margin-top:2px">'+s.label+'</div></div>';
+        var arrow=s.dir==="up"?"\u25B2":s.dir==="down"?"\u25BC":"\u2014";
+        H+='<div style="text-align:center;min-width:90px;padding:8px 14px;background:#FFF;border:1px solid #E2E8F0;border-radius:6px">';
+        H+='<div class="sf" style="font-size:18px;font-weight:800;color:'+col+'"><span style="font-size:11px">'+arrow+'</span> '+s.value+'</div>';
+        H+='<div class="sf" style="font-size:7.5px;text-transform:uppercase;letter-spacing:0.8px;color:#94A3B8;margin-top:1px">'+s.label+'</div></div>';
       });
       H+='</div></div>';
     }
 
     /* ARTICLES */
-    H+='<div class="container" style="padding:20px 32px">';
+    H+='<div style="padding:0">';
     (ct.items||[]).forEach(function(it,idx){
       var impCol=iC[(it.impact||"").toLowerCase()]||"#94A3B8";
-      H+='<div style="margin-bottom:14px;padding:14px 16px;background:#FFF;border:1px solid #E2E8F0;border-radius:8px;border-left:4px solid '+impCol+'">';
-      H+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
-      H+='<h3 class="sf" style="font-size:13.5px;font-weight:700;color:#0F172A;margin:0 0 6px;flex:1">'+it.title+'</h3>';
-      H+='<span class="sf" style="flex-shrink:0;padding:2px 8px;border-radius:4px;font-size:8px;font-weight:800;color:#FFF;background:'+impCol+'">'+(it.impact||"").toUpperCase()+'</span></div>';
-      H+='<p style="font-size:11.5px;color:#475569;line-height:1.6;margin:0">'+it.analysis+'</p>';
-      if(it.data)H+='<div class="sf" style="margin-top:8px;padding:5px 10px;background:#EFF6FF;border-radius:4px;font-size:10.5px;color:#1E40AF;font-weight:600">\u{1F4C8} '+it.data+'</div>';
-      H+='<div class="sf" style="margin-top:5px;font-size:9px;color:#94A3B8">'+it.src+'</div>';
+      H+='<div class="no-break" style="margin-bottom:10px;padding:12px 14px;background:#FFF;border:1px solid #E2E8F0;border-radius:6px;border-left:4px solid '+impCol+'">';
+      H+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">';
+      H+='<h3 class="sf" style="font-size:12.5px;font-weight:700;color:#0F172A;margin:0 0 4px;flex:1">'+it.title+'</h3>';
+      H+='<span class="sf" style="flex-shrink:0;padding:2px 7px;border-radius:3px;font-size:7.5px;font-weight:800;color:#FFF;background:'+impCol+'">'+(it.impact||"").toUpperCase()+'</span></div>';
+      H+='<p style="font-size:11px;color:#475569;line-height:1.55;margin:0">'+it.analysis+'</p>';
+      if(it.data)H+='<div class="sf" style="margin-top:6px;padding:4px 8px;background:#EFF6FF;border-radius:3px;font-size:10px;color:#1E40AF;font-weight:600">\u{1F4C8} '+it.data+'</div>';
+      H+='<div class="sf" style="margin-top:4px;font-size:8.5px;color:#94A3B8">'+it.src+'</div>';
       H+='</div>';
     });
 
     /* WHAT THIS MEANS */
     if(ct.insights&&ct.insights.length){
-      H+='<div style="background:#0F172A;color:#FFF;padding:18px 20px;border-radius:8px;margin-bottom:14px">';
-      H+='<h4 class="sf" style="color:#60A5FA;font-size:9px;text-transform:uppercase;letter-spacing:2px;margin:0 0 10px">WHAT THIS MEANS FOR YOU</h4>';
-      ct.insights.forEach(function(p){H+='<div style="margin-bottom:8px;padding-left:12px;border-left:3px solid #3B82F6;font-size:11.5px;line-height:1.6;color:#E2E8F0" class="sf">'+p+'</div>'});
+      H+='<div class="no-break" style="background:#0F172A;color:#FFF;padding:14px 16px;border-radius:6px;margin-bottom:10px">';
+      H+='<h4 class="sf" style="color:#60A5FA;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 8px">WHAT THIS MEANS FOR YOU</h4>';
+      ct.insights.forEach(function(p){H+='<div style="margin-bottom:6px;padding-left:10px;border-left:3px solid #3B82F6;font-size:10.5px;line-height:1.55;color:#E2E8F0" class="sf">'+p+'</div>'});
       H+='</div>';
     }
 
     /* WHAT TO WATCH */
     if(ct.watch&&ct.watch.length){
-      H+='<div style="background:#FFFBEB;border:1px solid #FDE68A;padding:14px 16px;border-radius:8px;margin-bottom:14px">';
-      H+='<h4 class="sf" style="color:#92400E;font-size:9px;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px">\u{1F440} WHAT TO WATCH</h4>';
-      ct.watch.forEach(function(p){H+='<div class="sf" style="margin-bottom:5px;font-size:11px;color:#78350F;line-height:1.5">\u2022 '+p+'</div>'});
+      H+='<div class="no-break" style="background:#FFFBEB;border:1px solid #FDE68A;padding:12px 14px;border-radius:6px;margin-bottom:10px">';
+      H+='<h4 class="sf" style="color:#92400E;font-size:8px;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 6px">\u{1F440} WHAT TO WATCH</h4>';
+      ct.watch.forEach(function(p){H+='<div class="sf" style="margin-bottom:4px;font-size:10px;color:#78350F;line-height:1.5">\u2022 '+p+'</div>'});
       H+='</div>';
     }
 
     /* DISCLAIMER + FOOTER */
-    H+='<div style="padding:10px 14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;margin-bottom:12px"><p class="sf" style="font-size:8.5px;color:#94A3B8;line-height:1.5;margin:0"><strong style="color:#64748B">Important:</strong> For informational purposes only. Not financial advice. Consult your advisor before making decisions.</p></div>';
-    H+='<div style="display:flex;justify-content:space-between;align-items:center" class="sf"><div style="font-size:9px;color:#94A3B8">'+cL+'</div><div style="font-size:8px;color:#CBD5E1">\u{1F43E} Prepared with NewsLens</div></div>';
+    H+='<div style="padding:8px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:4px;margin-bottom:8px"><p class="sf" style="font-size:8px;color:#94A3B8;line-height:1.5;margin:0"><strong style="color:#64748B">Important:</strong> For informational purposes only. Not financial advice. Consult your advisor before making decisions.</p></div>';
+    H+='<div style="display:flex;justify-content:space-between;align-items:center" class="sf"><div style="font-size:8.5px;color:#94A3B8">'+cL+'</div><div style="font-size:7.5px;color:#CBD5E1">\u{1F43E} Prepared with NewsLens</div></div>';
     H+='</div></body></html>';
 
     var w=window.open("","_blank");
