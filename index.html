@@ -281,151 +281,68 @@ async function claude(prompt){
 
 function mkComm(a,nm){return claude("You are "+JSON.stringify(nm||"Advisor")+", SG financial advisor.\n"+CTX+getTimeCtx()+getStyleCtx()+getLangCtx()+"\nWrite a daily market commentary.\nArticles: "+JSON.stringify(a)+"\nRules: Warm greeting appropriate for the day/time, 3-4 short paras, mention numbers, 250-350 words, disclaimer. Plain text only.")}
 function mkWA(a,tn,nm){return claude("You are "+JSON.stringify(nm||"Advisor")+", SG financial advisor.\n"+CTX+getTimeCtx()+getStyleCtx()+getLangCtx()+"\nWhatsApp broadcast. Tone: "+tn+".\nArticles: "+JSON.stringify(a)+"\nRules:\n- Greeting appropriate for day/time (e.g. 'Good Monday morning!' or 'Happy Friday evening!')\n- Emojis sparingly, *bold*, source\n- No [All]/[Retirees] tags - weave relevance naturally\n- 'Warm regards,' then name on new line (NOT '- Name')\n- Disclaimer, under 1500 chars\n- Plain text only")}
-/* ── Visual PDF Newsletter (magazine-style) ── */
-function openNL(articles){
-  var cts={};articles.forEach(function(a){var c=a._c||"other";if(!cts[c])cts[c]=0;cts[c]++});
-  var top=null,mx=0;Object.keys(cts).forEach(function(k){if(cts[k]>mx){mx=cts[k];top=k}});
-  var THM={global_markets:{a:"#2563EB",g:"linear-gradient(135deg,#0F2847,#1E3A5F)",l:"Market Intelligence"},geopolitics:{a:"#DC2626",g:"linear-gradient(135deg,#4A1419,#7F1D1D)",l:"Geopolitical Briefing"},gold_safe:{a:"#D97706",g:"linear-gradient(135deg,#4A3416,#78350F)",l:"Safe Haven Report"},sg_economy:{a:"#059669",g:"linear-gradient(135deg,#053B2C,#064E3B)",l:"Singapore Outlook"},cpf_medisave:{a:"#7C3AED",g:"linear-gradient(135deg,#2E1065,#4C1D95)",l:"CPF & Retirement"},healthcare:{a:"#0891B2",g:"linear-gradient(135deg,#0C3547,#164E63)",l:"Healthcare Advisory"},insurance:{a:"#9333EA",g:"linear-gradient(135deg,#3B1764,#581C87)",l:"Protection Review"},sgx_invest:{a:"#0284C7",g:"linear-gradient(135deg,#0A3352,#0C4A6E)",l:"Investment Digest"}};
-  var th=THM[top]||THM.global_markets;
+/* ── Claude-powered PDF Newsletter ── */
+async function genNLContent(articles){
+  var artJson=JSON.stringify(articles.map(function(a){return{title:a.title,summary:a.summary,source:a.source,url:a.url||"",impact:a.impact,key_figures:a.key_figures,audience:a.audience,_c:a._c}}));
+  var prompt="You are a SENIOR FINANCIAL ANALYST at a top-tier wealth management firm writing a private client briefing for Singapore financial advisors. Their clients are 40-65yo Singaporeans.\n\n"+CTX+getTimeCtx()+getStyleCtx()+getLangCtx()+"\n\nToday's articles:\n"+artJson+"\n\nWrite a RICH, ANALYTICAL newsletter that an advisor would be PROUD to send to private banking clients. Not just listing news — ANALYZE it.\n\nReturn ONLY this JSON:\n{\n\"lead_title\": \"A synthesized analytical headline that captures today's THEME — not just one article's title. Example: 'Markets Rally As War-End Optimism Grows, But Gold Signals Caution'\",\n\"lead_analysis\": \"4-5 sentences of DEEP analysis. Connect the dots between articles. What's the bigger picture? Why do these developments matter TOGETHER? Include 3+ specific numbers (percentages, dollar figures, index levels). Write like the Financial Times editorial.\",\n\"lead_source\": \"Primary source\",\n\"lead_url\": \"URL of the most relevant article\",\n\"sections\": [\n  {\n    \"category\": \"Category name\",\n    \"emoji\": \"relevant emoji\",\n    \"items\": [\n      {\n        \"title\": \"Headline\",\n        \"analysis\": \"3-4 sentences. NOT just what happened — explain: (1) The specific development with numbers, (2) WHY it matters for SG investors/retirees, (3) What to look out for. Write like you're explaining to an intelligent non-expert.\",\n        \"source\": \"Source name\",\n        \"url\": \"article URL\",\n        \"impact\": \"high/medium/low\",\n        \"key_data\": \"The single most important number: e.g. 'S&P 500 +0.7% to 5,847' or 'Gold -1.3% to US$4,695'\"\n      }\n    ]\n  }\n],\n\"what_it_means\": [\n  \"4 specific, actionable insights. NOT generic advice. Example: 'The 0.7% rally in US stocks suggests improved risk appetite — clients with underweight equity positions may want to review their allocation.' Each insight should reference specific data from the articles.\"\n],\n\"what_to_watch\": [\n  \"3 specific things to monitor with EXACT triggers. Example: 'Watch gold support at US$4,650 — a break below could signal further downside.' or 'MAS meeting on April 14 could adjust the S$NEER band.'\"\n]\n}\n\nCRITICAL: Be analytical, not just descriptive. Every paragraph should answer 'so what?' Include specific numbers. NEVER use alarming language. ONLY return valid JSON.";
+  var raw=await claude(prompt);
+  return pObj(raw);
+}
+
+function renderNL(content){
+  var THM={global_markets:{a:"#2563EB",g:"linear-gradient(135deg,#0F2847,#1E3A5F)",l:"Market Intelligence"},geopolitics:{a:"#DC2626",g:"linear-gradient(135deg,#4A1419,#7F1D1D)",l:"Geopolitical Briefing"},gold_safe:{a:"#D97706",g:"linear-gradient(135deg,#4A3416,#78350F)",l:"Safe Haven Report"},sg_economy:{a:"#059669",g:"linear-gradient(135deg,#053B2C,#064E3B)",l:"Singapore Outlook"},cpf_medisave:{a:"#7C3AED",g:"linear-gradient(135deg,#2E1065,#4C1D95)",l:"CPF & Retirement"},healthcare:{a:"#0891B2",g:"linear-gradient(135deg,#0C3547,#164E63)",l:"Healthcare Advisory"},insurance:{a:"#9333EA",g:"linear-gradient(135deg,#3B1764,#581C87)",l:"Protection Review"},sgx_invest:{a:"#0284C7",g:"linear-gradient(135deg,#0A3352,#0C4A6E)",l:"Investment Digest"},mas_alerts:{a:"#DC2626",g:"linear-gradient(135deg,#4A1419,#991B1B)",l:"Regulatory Alert"}};
+  var th=THM.global_markets;
+  if(content.sections&&content.sections[0]){var fc=content.sections[0].category||"";Object.keys(THM).forEach(function(k){if(fc.toLowerCase().indexOf(k.replace(/_/g,""))!==-1)th=THM[k]})}
   var dt=new Date().toLocaleDateString("en-SG",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-  var iC={high:"#DC2626",medium:"#D97706",low:"#059669"};var iL={high:"HIGH IMPACT",medium:"MEDIUM",low:"LOW"};
-  var aL={pre_retiree:"Pre-Retirees",retiree:"Retirees",hnw:"HNW Clients",all:"All Clients"};
-  var ph=S.advPhoto?'<img src="'+S.advPhoto+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.25);box-shadow:0 4px 20px rgba(0,0,0,0.3)" />':'<div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:28px;font-weight:700">'+(S.advName?S.advName.charAt(0).toUpperCase():"?")+'</div>';
-  var grp={};articles.forEach(function(a){var c=a._c||"other";if(!grp[c])grp[c]=[];grp[c].push(a)});
-  /* Find the top story (highest impact) */
-  var topStory=null;articles.forEach(function(a){if(!topStory&&a.impact==="high")topStory=a});
-  if(!topStory)topStory=articles[0];
-  var cL="";if(S.advPhone)cL+=S.advPhone;if(S.advEmail)cL+=(cL?"&nbsp;&nbsp;\u00B7&nbsp;&nbsp;":"")+S.advEmail;
-
-  var H='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:A4;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}body{margin:0;font-family:Georgia,"Times New Roman",serif;color:#1A1A2E;font-size:12px;background:#FFF}h1,h2,h3{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}</style></head><body>';
-  /* ═══ HERO MASTHEAD ═══ */
-  H+='<div style="background:'+th.g+';padding:28px 32px 24px;color:#FFF;position:relative">';
-  H+='<div style="display:flex;align-items:center;justify-content:space-between">';
-  H+='<div style="display:flex;align-items:center;gap:16px">'+ph+'<div><h2 style="margin:0;font-size:18px;font-weight:700;letter-spacing:-0.02em">'+(S.advName||"Your Advisor")+'</h2><div style="font-size:11px;opacity:0.65;margin-top:3px;font-family:Helvetica,sans-serif">'+(S.advTitle||"Financial Advisor")+(S.advCompany?" \u00B7 "+S.advCompany:"")+'</div></div></div>';
-  H+='<div style="text-align:right"><div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;opacity:0.4;font-family:Helvetica,sans-serif">Private Client Briefing</div><h1 style="margin:6px 0 0;font-size:24px;font-weight:700;letter-spacing:-0.03em">'+th.l+'</h1><div style="font-size:10px;opacity:0.5;margin-top:4px;font-family:Helvetica,sans-serif">'+dt+'</div></div></div></div>';
+  var iC={high:"#DC2626",medium:"#D97706",low:"#059669"};
+  var ph=S.advPhoto?'<img src="'+S.advPhoto+'" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid rgba(255,255,255,0.25);box-shadow:0 4px 20px rgba(0,0,0,0.3)" />':'<div style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:28px;font-weight:700">'+(S.advName?S.advName.charAt(0):"?")+'</div>';
+  var cL="";if(S.advPhone)cL+=S.advPhone;if(S.advEmail)cL+=(cL?" \u00B7 ":"")+S.advEmail;
+  var H='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>@page{size:A4;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}body{margin:0;font-family:Georgia,serif;color:#1A1A2E;font-size:12.5px;line-height:1.6;background:#FFF}h1,h2,h3,h4{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.3}a{color:'+th.a+';text-decoration:none;font-weight:600}</style></head><body>';
+  H+='<div style="background:'+th.g+';padding:30px 32px 26px;color:#FFF"><div style="display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:16px">'+ph+'<div><h2 style="margin:0;font-size:18px;font-weight:700">'+(S.advName||"Advisor")+'</h2><div style="font-size:11px;opacity:0.6;margin-top:3px;font-family:Helvetica,sans-serif">'+(S.advTitle||"")+(S.advCompany?" \u00B7 "+S.advCompany:"")+'</div></div></div><div style="text-align:right"><div style="font-size:9px;text-transform:uppercase;letter-spacing:2px;opacity:0.4;font-family:Helvetica,sans-serif">Private Client Briefing</div><h1 style="margin:6px 0 0;font-size:24px;font-weight:700">'+th.l+'</h1><div style="font-size:10px;opacity:0.5;margin-top:4px;font-family:Helvetica,sans-serif">'+dt+'</div></div></div></div>';
   H+='<div style="height:4px;background:'+th.a+'"></div>';
-
-  /* ═══ LEAD STORY (full-width feature) ═══ */
-  if(topStory){
-    var tsCat=CATS.find(function(c){return c.id===topStory._c});
-    H+='<div style="padding:24px 32px 20px;border-bottom:2px solid #E2E8F0">';
-    H+='<div style="font-family:Helvetica,sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:'+th.a+';margin-bottom:10px">THE BIG STORY</div>';
-    H+='<h2 style="margin:0 0 10px;font-size:22px;font-weight:700;line-height:1.3;color:#0F172A">'+topStory.title+'</h2>';
-    H+='<p style="margin:0 0 10px;font-size:13.5px;line-height:1.7;color:#334155">'+topStory.summary+'</p>';
-    H+='<div style="display:flex;gap:12px;font-family:Helvetica,sans-serif;font-size:10px;color:#94A3B8"><span style="font-weight:700;color:#64748B">'+topStory.source+'</span><span style="padding:2px 8px;border-radius:3px;color:#FFF;font-weight:700;background:'+(iC[topStory.impact]||"#94A3B8")+'">'+(iL[topStory.impact]||"")+'</span>'+(topStory.key_figures?'<span style="color:#64748B">\u{1F4C8} '+topStory.key_figures+'</span>':'')+(topStory.url?'<a href="'+topStory.url+'" style="color:'+th.a+';font-weight:700;text-decoration:none;margin-left:auto">Read full article \u2192</a>':'')+'</div></div>';
-  }
-
-  /* ═══ KEY DEVELOPMENTS (category sections) ═══ */
-  H+='<div style="padding:20px 32px">';
-  Object.keys(grp).forEach(function(cid){
-    var cat=CATS.find(function(c){return c.id===cid});var items=grp[cid];
-    var cl=cat?cat.label:"Other";var ct=cat?cat.th:"#64748B";var ce=cat?cat.emoji:"";
-    /* Section header with colored background strip */
-    H+='<div style="margin-bottom:16px">';
-    H+='<div style="background:'+ct+';color:#FFF;padding:8px 14px;border-radius:6px 6px 0 0;font-family:Helvetica,sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px">'+ce+' '+cl+'</div>';
-    /* Items as cards */
-    H+='<div style="border:1px solid #E2E8F0;border-top:none;border-radius:0 0 6px 6px;overflow:hidden">';
-    items.forEach(function(it,idx){
-      if(it===topStory&&items.length>1)return;
+  H+='<div style="padding:28px 32px 24px;border-bottom:2px solid #E2E8F0"><h4 style="color:'+th.a+';font-size:10px;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px">THE BIG STORY</h4><h2 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#0F172A">'+(content.lead_title||"")+'</h2><p style="margin:0 0 12px;font-size:13.5px;color:#334155;line-height:1.7">'+(content.lead_analysis||"")+'</p><div style="font-family:Helvetica,sans-serif;font-size:10px;color:#94A3B8">'+(content.lead_source||"")+(content.lead_url?' \u00B7 <a href="'+content.lead_url+'">Read full article \u2192</a>':'')+'</div></div>';
+  H+='<div style="padding:24px 32px">';
+  (content.sections||[]).forEach(function(sec){
+    H+='<div style="margin-bottom:22px"><div style="background:'+th.a+';color:#FFF;padding:8px 14px;border-radius:6px 6px 0 0;font-family:Helvetica,sans-serif;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px">'+(sec.emoji||"")+" "+sec.category+'</div><div style="border:1px solid #E2E8F0;border-top:none;border-radius:0 0 6px 6px">';
+    (sec.items||[]).forEach(function(it,idx){
       var bg=idx%2===0?"#FAFBFC":"#FFF";
-      H+='<div style="padding:12px 14px;background:'+bg+';border-bottom:1px solid #F1F5F9">';
-      H+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
-      H+='<div style="flex:1"><h3 style="margin:0 0 4px;font-size:13px;font-weight:700;color:#0F172A;line-height:1.35;font-family:Helvetica,sans-serif">'+it.title+'</h3>';
-      H+='<p style="margin:0;font-size:11.5px;color:#475569;line-height:1.55">'+it.summary+'</p></div>';
-      H+='<div style="flex-shrink:0;writing-mode:vertical-rl;text-orientation:mixed;padding:4px 6px;border-radius:4px;font-family:Helvetica,sans-serif;font-size:8px;font-weight:800;color:#FFF;background:'+(iC[it.impact]||"#94A3B8")+';letter-spacing:0.5px">'+(iL[it.impact]||"")+'</div></div>';
-      H+='<div style="display:flex;gap:10px;margin-top:6px;font-family:Helvetica,sans-serif;font-size:9px;color:#94A3B8"><span style="font-weight:700">'+it.source+'</span><span style="color:'+ct+'">'+(aL[it.audience]||"All")+'</span>'+(it.key_figures?'<span>\u{1F4C8} '+it.key_figures+'</span>':'')+(it.url?'<a href="'+it.url+'" style="color:'+ct+';font-weight:700;text-decoration:none;margin-left:auto">Read \u2192</a>':'')+'</div></div>';
+      H+='<div style="padding:14px 16px;background:'+bg+';border-bottom:1px solid #F1F5F9"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div style="flex:1"><h3 style="margin:0 0 6px;font-size:14px;font-weight:700;color:#0F172A;font-family:Helvetica,sans-serif">'+it.title+'</h3><p style="margin:0;font-size:12px;color:#475569;line-height:1.6">'+it.analysis+'</p></div>'+(it.impact?'<div style="flex-shrink:0;padding:4px 8px;border-radius:4px;font-family:Helvetica,sans-serif;font-size:9px;font-weight:800;color:#FFF;background:'+(iC[it.impact]||"#94A3B8")+'">'+it.impact.toUpperCase()+'</div>':'')+'</div>'+(it.key_data?'<div style="margin-top:8px;padding:6px 10px;background:#EFF6FF;border-radius:4px;font-family:Helvetica,sans-serif;font-size:11px;color:#1E40AF;font-weight:600">\u{1F4C8} '+it.key_data+'</div>':'')+'<div style="margin-top:6px;font-family:Helvetica,sans-serif;font-size:9.5px;color:#94A3B8">'+it.source+(it.url?' \u00B7 <a href="'+it.url+'">Read source \u2192</a>':'')+'</div></div>';
     });
     H+='</div></div>';
   });
-
-  /* ═══ WHAT TO WATCH ═══ */
-  var highItems=articles.filter(function(a){return a.impact==="high"});
-  if(highItems.length>1){
-    H+='<div style="background:#0F172A;color:#FFF;padding:16px 18px;border-radius:8px;margin-bottom:16px">';
-    H+='<div style="font-family:Helvetica,sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:'+th.a+';margin-bottom:10px">WHAT TO WATCH</div>';
-    highItems.forEach(function(it){
-      H+='<div style="margin-bottom:8px;padding-left:12px;border-left:3px solid '+th.a+'"><div style="font-family:Helvetica,sans-serif;font-size:12px;font-weight:700;color:#E2E8F0">'+it.title+'</div><div style="font-size:10.5px;color:#94A3B8;margin-top:2px">'+it.source+'</div></div>';
-    });
-    H+='</div>';
-  }
-
-  /* ═══ DISCLAIMER ═══ */
-  H+='<div style="padding:14px 16px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;margin-bottom:16px"><p style="margin:0;font-family:Helvetica,sans-serif;font-size:9px;color:#64748B;line-height:1.6"><strong>Important:</strong> This briefing is for informational purposes only and does not constitute financial advice. Market conditions can change rapidly. Please consult your financial advisor before making any decisions. Past performance is not indicative of future results.</p></div>';
-
-  /* ═══ FOOTER ═══ */
-  H+='<div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid #E2E8F0;font-family:Helvetica,sans-serif"><div style="font-size:10px;color:#94A3B8">'+cL+'</div><div style="font-size:9px;color:#CBD5E1">\u{1F43E} Prepared with NewsLens</div></div>';
-  H+='</div></body></html>';
+  if(content.what_it_means&&content.what_it_means.length){
+    H+='<div style="background:#0F172A;color:#FFF;padding:20px 22px;border-radius:8px;margin-bottom:18px"><h4 style="color:'+th.a+';font-size:10px;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px">WHAT THIS MEANS FOR YOU</h4>';
+    content.what_it_means.forEach(function(p){H+='<div style="margin-bottom:8px;padding-left:14px;border-left:3px solid '+th.a+';font-size:12.5px;line-height:1.6;color:#E2E8F0;font-family:Helvetica,sans-serif">'+p+'</div>'});H+='</div>';}
+  if(content.what_to_watch&&content.what_to_watch.length){
+    H+='<div style="background:#FFFBEB;border:1px solid #FDE68A;padding:16px 18px;border-radius:8px;margin-bottom:18px"><h4 style="color:#92400E;font-size:10px;text-transform:uppercase;letter-spacing:2px;margin:0 0 10px;font-family:Helvetica,sans-serif">\u{1F440} WHAT TO WATCH</h4>';
+    content.what_to_watch.forEach(function(p){H+='<div style="margin-bottom:6px;font-size:12px;color:#78350F;line-height:1.5;font-family:Helvetica,sans-serif">\u2022 '+p+'</div>'});H+='</div>';}
+  H+='<div style="padding:12px 14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;margin-bottom:14px"><p style="margin:0;font-family:Helvetica,sans-serif;font-size:9px;color:#64748B;line-height:1.6"><strong>Important:</strong> For informational purposes only. Not financial advice.</p></div>';
+  H+='<div style="display:flex;justify-content:space-between;align-items:center;font-family:Helvetica,sans-serif"><div style="font-size:10px;color:#94A3B8">'+cL+'</div><div style="font-size:9px;color:#CBD5E1">\u{1F43E} Prepared with NewsLens</div></div></div></body></html>';
   var w=window.open("","_blank");if(w){w.document.write(H);w.document.close();setTimeout(function(){w.print()},600)}
 }
 
-/* ── PPTX with style options ── */
+/* ── Claude-powered PPTX ── */
 function mkPptx(articles,style){
-  var stylePrompt=style==="cta"?"Make each slide ACTION-ORIENTED. Each bullet should tell the advisor what to DO or DISCUSS with clients. Use verbs like 'Review', 'Consider', 'Discuss with clients', 'Action needed'. End with a clear call-to-action slide.":"Make each slide DATA-FOCUSED and ANALYTICAL. Lead with numbers and key figures. Explain what happened and why it matters. Professional, measured tone. End with a balanced outlook summary.";
-  return claude("Generate a JSON object for a PowerPoint deck.\n"+stylePrompt+"\nArticles: "+JSON.stringify(articles)+"\n\nReturn ONLY this JSON structure, nothing else:\n{\"title\":\"Daily Market Brief\",\"subtitle\":\""+new Date().toLocaleDateString("en-SG",{day:"numeric",month:"long",year:"numeric"})+"\",\"slides\":[{\"title\":\"Slide headline\",\"bullets\":[\"Point 1\",\"Point 2\",\"Point 3\"],\"impact\":\"high\",\"data_highlight\":\"Key stat or number\",\"source\":\"Reuters\"}],\"summary_slide\":{\"title\":\"Key Takeaways\",\"bullets\":[\"Takeaway 1\",\"Takeaway 2\"]},\"disclaimer\":\"For informational purposes only. Not financial advice.\"}").then(pObj)
+  var sp=style==="cta"?
+    "STYLE: Call-To-Action Driven.\n- Every slide MUST end with 1-2 clear action items\n- Use strong verbs: 'Review client portfolios for...', 'Schedule conversations about...', 'Consider rebalancing towards...'\n- Make it practical: what should the advisor DO on Monday morning?":
+    "STYLE: Professional Analytical.\n- Lead every slide with the KEY NUMBER\n- Explain the 'so what' — why does this data point matter?\n- Measured, authoritative tone like a Goldman Sachs research note\n- End each slide with an outlook statement";
+  var prompt="You are a HEAD OF RESEARCH at a top wealth management firm creating a client-facing presentation deck.\n\n"+sp+"\n\n"+CTX+getTimeCtx()+"\n\nArticles:\n"+JSON.stringify(articles.map(function(a){return{title:a.title,summary:a.summary,source:a.source,impact:a.impact,key_figures:a.key_figures}}))+"\n\nGenerate a COMPELLING, STORY-DRIVEN presentation. Each slide should build a NARRATIVE.\n\nReturn ONLY JSON:\n{\n\"title\": \"Engaging analytical title. NOT just 'Market Brief'. Example: 'Equities Rally on Peace Hopes — Positioning for What Comes Next'\",\n\"subtitle\": \""+new Date().toLocaleDateString("en-SG",{day:"numeric",month:"long",year:"numeric"})+"\",\n\"slides\": [\n  {\n    \"title\": \"Analytical headline with a TAKE (not just a topic). Example: 'US Markets Signal Confidence — But Oil Tells a Different Story'\",\n    \"bullets\": [\n      \"Each bullet is 2 sentences of ANALYSIS with specific data. Example: 'S&P 500 rose 0.7% to 5,847 as investors priced in a potential ceasefire. The rally was broad-based, with the Nasdaq 100 gaining 1.2%.'\",\n      \"Explain the IMPLICATION. Example: 'For SG investors with US equity exposure, this rally reduces the recent drawdown. However, the two-year Treasury yield at 3.81% suggests the market still expects rates to stay elevated.'\",\n      \"Include a FORWARD-LOOKING statement. Example: 'Key level to watch: S&P 500 resistance at 5,900. A break above could signal the start of a new leg higher.'\"\n    ],\n    \"impact\": \"high\",\n    \"data_highlight\": \"THE most important number for this slide — e.g. 'S&P 500 +0.7% | Nasdaq +1.2% | Brent crude -US$101/bbl'\",\n    \"source\": \"Bloomberg, Reuters\"\n  }\n],\n\"summary_slide\": {\n  \"title\": \"Key Takeaways\",\n  \"bullets\": [\"4 synthesized insights that TIE EVERYTHING TOGETHER. Not repetition — higher-level conclusions that connect the dots across all slides.\"]\n},\n\"disclaimer\": \"This presentation is for informational purposes only and does not constitute financial advice. Past performance is not indicative of future results.\"\n}\n\n5-7 content slides. Be analytical, not descriptive. Include specific numbers everywhere. ONLY return valid JSON.";
+  return claude(prompt).then(pObj);
 }
+
 async function buildPptx(ct){
-  if(!window.PptxGenJS){
-    await new Promise(function(rs,rj){
-      var s=document.createElement("script");
-      s.src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";
-      s.onload=rs;s.onerror=function(){rj(new Error("Failed to load PptxGenJS"))};
-      document.head.appendChild(s);
-    });
-  }
-  var pr=new PptxGenJS();pr.layout="LAYOUT_16x9";
-  var P="1E293B",SC="CBD5E1",A="0EA5E9",D="0F1219",L="F8FAFC",M="64748B";
-  /* Title slide */
-  var s1=pr.addSlide();s1.background={color:D};
-  s1.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.08,fill:{color:A}});
-  s1.addText(ct.title||"Market Brief",{x:0.8,y:1.0,w:8.4,h:1.5,fontSize:36,fontFace:"Georgia",color:"FFFFFF",bold:true});
-  s1.addText(ct.subtitle||"",{x:0.8,y:2.6,w:8.4,h:0.8,fontSize:18,fontFace:"Calibri",color:SC});
-  if(S.advName)s1.addText("Prepared by "+S.advName,{x:0.8,y:4.2,w:8.4,h:0.5,fontSize:12,fontFace:"Calibri",color:M,italic:true});
-  /* Content slides */
+  if(!window.PptxGenJS){await new Promise(function(rs,rj){var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";s.onload=rs;s.onerror=function(){rj(new Error("Failed to load PptxGenJS"))};document.head.appendChild(s)})}
+  var pr=new PptxGenJS();pr.layout="LAYOUT_16x9";var P="1E293B",SC="CBD5E1",A="0EA5E9",D="0F1219",L="F8FAFC",M="64748B";
+  var s1=pr.addSlide();s1.background={color:D};s1.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.08,fill:{color:A}});s1.addText(ct.title||"Market Brief",{x:0.8,y:0.8,w:8.4,h:1.8,fontSize:32,fontFace:"Georgia",color:"FFFFFF",bold:true});s1.addText(ct.subtitle||"",{x:0.8,y:2.8,w:8.4,h:0.6,fontSize:16,fontFace:"Calibri",color:SC});if(S.advName)s1.addText("Prepared by "+S.advName+(S.advCompany?" \u00B7 "+S.advCompany:""),{x:0.8,y:4.5,w:8.4,h:0.5,fontSize:11,fontFace:"Calibri",color:M,italic:true});
   var ic={high:"DC2626",medium:"D97706",low:"16A34A"};
-  (ct.slides||[]).forEach(function(sl,i){
-    var sd=pr.addSlide();sd.background={color:L};
-    sd.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.06,fill:{color:P}});
-    /* Impact badge */
-    sd.addShape(pr.shapes.RECTANGLE,{x:8.2,y:0.3,w:1.4,h:0.4,fill:{color:ic[sl.impact]||M},rectRadius:0.05});
-    sd.addText((sl.impact||"").toUpperCase(),{x:8.2,y:0.3,w:1.4,h:0.4,fontSize:10,fontFace:"Calibri",color:"FFFFFF",bold:true,align:"center",valign:"middle"});
-    /* Slide number + title */
-    sd.addText(String(i+1).padStart(2,"0"),{x:0.5,y:0.25,w:0.6,h:0.5,fontSize:28,fontFace:"Georgia",color:A,bold:true});
-    sd.addText(sl.title||"",{x:1.2,y:0.25,w:6.8,h:0.6,fontSize:20,fontFace:"Georgia",color:P,bold:true});
-    /* Data highlight */
-    if(sl.data_highlight){
-      sd.addShape(pr.shapes.RECTANGLE,{x:0.5,y:1.2,w:9,h:0.8,fill:{color:"FFFFFF"},line:{color:"E2E8F0",width:1},rectRadius:0.05});
-      sd.addText("\u{1F4C8} "+sl.data_highlight,{x:0.8,y:1.2,w:8.5,h:0.8,fontSize:15,fontFace:"Calibri",color:P,bold:true,valign:"middle"});
-    }
-    /* Bullets */
-    var by=sl.data_highlight?2.3:1.2;
-    var bi=(sl.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<(sl.bullets||[]).length-1,color:"334155",fontSize:13,fontFace:"Calibri",lineSpacingMultiple:1.3}}});
-    if(bi.length)sd.addText(bi,{x:0.8,y:by,w:8,h:2.8,paraSpaceAfter:6});
-    /* Source */
-    if(sl.source)sd.addText("Source: "+sl.source,{x:0.5,y:5.1,w:9,h:0.35,fontSize:9,fontFace:"Calibri",color:M,italic:true,align:"right"});
-  });
-  /* Summary slide */
-  if(ct.summary_slide){
-    var ss=pr.addSlide();ss.background={color:P};
-    ss.addText(ct.summary_slide.title||"Key Takeaways",{x:0.8,y:0.4,w:8.4,h:0.8,fontSize:28,fontFace:"Georgia",color:"FFFFFF",bold:true});
-    ss.addShape(pr.shapes.RECTANGLE,{x:0.8,y:1.3,w:2,h:0.04,fill:{color:A}});
-    var si=(ct.summary_slide.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<(ct.summary_slide.bullets||[]).length-1,color:SC,fontSize:15,fontFace:"Calibri",lineSpacingMultiple:1.4}}});
-    if(si.length)ss.addText(si,{x:0.8,y:1.8,w:8.4,h:3,paraSpaceAfter:10});
-  }
-  /* Disclaimer */
-  var ds=pr.addSlide();ds.background={color:D};
-  ds.addText(ct.disclaimer||"For informational purposes only.",{x:0.8,y:2,w:8.4,h:2,fontSize:13,fontFace:"Calibri",color:SC,lineSpacingMultiple:1.5});
-  if(S.advName)ds.addText(S.advName+(S.advCompany?" \u00B7 "+S.advCompany:""),{x:0.8,y:4.5,w:8.4,h:0.5,fontSize:11,fontFace:"Calibri",color:M});
+  (ct.slides||[]).forEach(function(sl,i){var sd=pr.addSlide();sd.background={color:L};sd.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.06,fill:{color:P}});sd.addShape(pr.shapes.RECTANGLE,{x:8.1,y:0.25,w:1.5,h:0.4,fill:{color:ic[sl.impact]||M},rectRadius:0.05});sd.addText((sl.impact||"").toUpperCase(),{x:8.1,y:0.25,w:1.5,h:0.4,fontSize:10,fontFace:"Calibri",color:"FFFFFF",bold:true,align:"center",valign:"middle"});sd.addText(sl.title||"",{x:0.6,y:0.2,w:7.2,h:0.7,fontSize:20,fontFace:"Georgia",color:P,bold:true});if(sl.data_highlight){sd.addShape(pr.shapes.RECTANGLE,{x:0.6,y:1.1,w:8.5,h:0.7,fill:{color:"EFF6FF"},rectRadius:0.05});sd.addText("\u{1F4C8} "+sl.data_highlight,{x:0.9,y:1.1,w:8,h:0.7,fontSize:14,fontFace:"Calibri",color:"1E40AF",bold:true,valign:"middle"})}var by=sl.data_highlight?2.1:1.1;var bi=(sl.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<(sl.bullets||[]).length-1,color:"334155",fontSize:12,fontFace:"Calibri",lineSpacingMultiple:1.4}}});if(bi.length)sd.addText(bi,{x:0.6,y:by,w:8.5,h:3,paraSpaceAfter:8});if(sl.source)sd.addText("Source: "+sl.source,{x:0.6,y:5.1,w:9,h:0.3,fontSize:9,fontFace:"Calibri",color:M,italic:true,align:"right"})});
+  if(ct.summary_slide){var ss=pr.addSlide();ss.background={color:P};ss.addText(ct.summary_slide.title||"Key Takeaways",{x:0.8,y:0.4,w:8.4,h:0.7,fontSize:26,fontFace:"Georgia",color:"FFFFFF",bold:true});ss.addShape(pr.shapes.RECTANGLE,{x:0.8,y:1.2,w:2,h:0.04,fill:{color:A}});var si=(ct.summary_slide.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<(ct.summary_slide.bullets||[]).length-1,color:SC,fontSize:14,fontFace:"Calibri",lineSpacingMultiple:1.5}}});if(si.length)ss.addText(si,{x:0.8,y:1.7,w:8.4,h:3.2,paraSpaceAfter:10})}
+  var ds=pr.addSlide();ds.background={color:D};ds.addText(ct.disclaimer||"For informational purposes only.",{x:0.8,y:1.8,w:8.4,h:1.5,fontSize:13,fontFace:"Calibri",color:SC,lineSpacingMultiple:1.5});if(S.advName)ds.addText(S.advName+(S.advCompany?" \u00B7 "+S.advCompany:""),{x:0.8,y:4,w:8.4,h:0.5,fontSize:11,fontFace:"Calibri",color:M});
   return pr;
 }
 function shareWA(msg){window.open("https://wa.me/?text="+encodeURIComponent(msg),"_blank")}
 
-function togC(id){var i=S.aC.indexOf(id);if(i>=0)S.aC.splice(i,1);else S.aC.push(id);R()}
-function togA(a){var i=S.sel.findIndex(function(x){return x.title===a.title});if(i>=0)S.sel.splice(i,1);else S.sel.push(a);R()}
-function cp(t){navigator.clipboard.writeText(t);S.copied=true;R();setTimeout(function(){S.copied=false;R()},2000)}
-
-async function doCm(){if(!S.sel.length)return;S.gC=true;S.oE="";S.tab="commentary";R();startT();try{S.comm=await mkComm(S.sel,S.advName);saveHist("Brief",S.comm)}catch(e){S.oE=e.message}S.gC=false;stopT();R()}
-async function doWA(){if(!S.sel.length)return;S.gW=true;S.oE="";S.tab="whatsapp";R();startT();try{S.waM=await mkWA(S.sel,S.tone,S.advName);saveHist("WhatsApp",S.waM)}catch(e){S.oE=e.message}S.gW=false;stopT();R()}
-async function doNL(){if(!S.sel.length)return;S.gP=true;S.oE="";S.tab="pdf";R();try{openNL(S.sel)}catch(e){S.oE=e.message}S.gP=false;R()}
+async function doNL(){if(!S.sel.length)return;S.gP=true;S.oE="";S.tab="pdf";R();startT();try{var c=await genNLContent(S.sel);if(!c)throw new Error("Claude returned empty. Try again.");renderNL(c);saveHist("PDF",c.lead_title+" - "+(c.what_it_means||[]).join("; "))}catch(e){S.oE=e.message}S.gP=false;stopT();R()}
 async function doPx(){if(!S.sel.length)return;S.gX=true;S.oE="";S.tab="pptx";R();startT();try{var c=await mkPptx(S.sel,S.pptxStyle);if(!c)throw new Error("Claude returned empty. Try again.");var p=await buildPptx(c);await p.writeFile({fileName:"Brief_"+new Date().toISOString().slice(0,10)+".pptx"})}catch(e){S.oE=e.message}S.gX=false;stopT();R()}
 
 /* ── Render ── */
