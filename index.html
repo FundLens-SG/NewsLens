@@ -72,11 +72,19 @@ function gS(k,d){try{return localStorage.getItem("nl_"+k)||d}catch(e){return d}}
 function sS(k,v){try{localStorage.setItem("nl_"+k,v)}catch(e){}}
 
 /* Version check — clear corrupt localStorage from older versions */
-var APP_VER="3";
+var APP_VER="4";
 if(gS("ver","")!==APP_VER){
   try{["cats","hist","nots","newsCache"].forEach(function(k){localStorage.removeItem("nl_"+k)})}catch(e){}
   sS("ver",APP_VER);
 }
+
+/* Global error handler — shows errors visually */
+window.onerror=function(msg,src,line){
+  var d=document.getElementById("err-debug");
+  if(!d){d=document.createElement("div");d.id="err-debug";d.style.cssText="position:fixed;bottom:0;left:0;right:0;background:#2A1215;color:#F87171;padding:8px 12px;font-size:11px;z-index:9999;max-height:100px;overflow:auto;font-family:monospace";document.body.appendChild(d)}
+  d.textContent="JS Error: "+msg+" (line "+line+")";
+  console.error("NewsLens error:",msg,src,line);
+};
 function cleanJ(s){if(!s)return"";var f=String.fromCharCode(96,96,96);var o=s;while(o.indexOf(f+"json")!==-1)o=o.replace(f+"json","");while(o.indexOf(f)!==-1)o=o.replace(f,"");return o.trim()}
 function pObj(r){if(!r)return null;var c=cleanJ(r);try{return JSON.parse(c)}catch(e){}var a=c.indexOf("{"),b=c.lastIndexOf("}");if(a!==-1&&b>a){try{return JSON.parse(c.slice(a,b+1))}catch(e){}}return null}
 var IMP={high:0,medium:1,low:2};
@@ -926,6 +934,7 @@ function rCard(parent,it){
   if(it.key_figures)btmRow.appendChild(h("span",{style:"padding:3px 7px;background:var(--sf);border-radius:4px;font-size:10.5px;color:var(--t2)"},"\u{1F4C8} "+it.key_figures));
   btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(124,58,237,0.15);color:#A78BFA;border:1px solid rgba(124,58,237,0.3);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();S._askItem=it;S._askChat=[];S._askInput="";S.showAsk=true;R()}},"\u{1F4AC} Ask"));
   if(it.url){btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(14,165,233,0.1);color:var(--ac);border:1px solid rgba(14,165,233,0.2);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(it.url,"_blank")}},"\u{1F517} Source"))}
+  else if(it.title&&it.source){var searchUrl="https://www.google.com/search?q="+encodeURIComponent(it.title+" "+it.source);btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(14,165,233,0.1);color:var(--ac);border:1px solid rgba(14,165,233,0.2);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(searchUrl,"_blank")}},"\u{1F50D} Find"))}
   card.appendChild(btmRow);
   parent.appendChild(card)}
 
@@ -977,7 +986,13 @@ R();
 
 /* ── Service Worker for PWA installability ── */
 if("serviceWorker" in navigator){
+  /* Force update: unregister old, register new */
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(r){r.update()});
+  });
   navigator.serviceWorker.register("sw.js").catch(function(){});
+  /* Clear old caches */
+  if(window.caches){caches.keys().then(function(names){names.forEach(function(n){if(n.indexOf("newslens-v4")===-1&&n.indexOf("newslens-news-v2")===-1){caches.delete(n)}})})}
 }
 </script>
 </body>
