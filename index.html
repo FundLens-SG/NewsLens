@@ -70,6 +70,13 @@ var SERVER="https://newslens.chungakwanc.workers.dev";
 
 function gS(k,d){try{return localStorage.getItem("nl_"+k)||d}catch(e){return d}}
 function sS(k,v){try{localStorage.setItem("nl_"+k,v)}catch(e){}}
+
+/* Version check — clear corrupt localStorage from older versions */
+var APP_VER="3";
+if(gS("ver","")!==APP_VER){
+  try{["cats","hist","nots","newsCache"].forEach(function(k){localStorage.removeItem("nl_"+k)})}catch(e){}
+  sS("ver",APP_VER);
+}
 function cleanJ(s){if(!s)return"";var f=String.fromCharCode(96,96,96);var o=s;while(o.indexOf(f+"json")!==-1)o=o.replace(f+"json","");while(o.indexOf(f)!==-1)o=o.replace(f,"");return o.trim()}
 function pObj(r){if(!r)return null;var c=cleanJ(r);try{return JSON.parse(c)}catch(e){}var a=c.indexOf("{"),b=c.lastIndexOf("}");if(a!==-1&&b>a){try{return JSON.parse(c.slice(a,b+1))}catch(e){}}return null}
 var IMP={high:0,medium:1,low:2};
@@ -92,16 +99,28 @@ async function getSbToken(){
   }catch(e){console.warn("Token error:",e);return""}
 }
 
+/* Safe JSON parse — never crashes */
+function jP(str,fallback){try{return JSON.parse(str)}catch(e){return fallback}}
+
 var S={claudeKey:gS("ck",""),
 advName:gS("nm",""),advTitle:gS("ti","Financial Advisor"),advPhoto:gS("ph",""),advCompany:gS("co",""),advPhone:gS("pn",""),advEmail:gS("em",""),
-aC:JSON.parse(gS("cats",'["global_markets","geopolitics","gold_safe","sg_economy","cpf_medisave","healthcare","insurance","sgx_invest","mas_alerts"]')),
+aC:jP(gS("cats","[]"),["global_markets","geopolitics","gold_safe","sg_economy","cpf_medisave","healthcare","insurance","sgx_invest","mas_alerts"]),
 schedule:["08:00"],sortMode:gS("sm","category"),
 lang:gS("lang","en"),aiStyle:gS("ais",""),
-history:JSON.parse(gS("hist","[]")),
-notifs:JSON.parse(gS("nots",'{"digest":true,"fetch":true,"masAlert":true,"highUrgency":true}')),
+history:jP(gS("hist","[]"),[]),
+notifs:jP(gS("nots","{}"),{digest:true,fetch:true,masAlert:true,highUrgency:true}),
 news:{},sel:[],ld:false,fErr:"",tab:"news",tone:"professional",segF:"all",
 showSettings:false,showHelp:false,showLogin:true,loginMode:"login",loginErr:"",loginBusy:false,
 comm:"",gC:false,waM:"",gW:false,gP:false,gX:false,pptxStyle:"professional",oE:"",timer:0,copied:false,userEmail:""};
+
+/* Ensure defaults */
+if(!S.aC||!S.aC.length)S.aC=["global_markets","geopolitics","gold_safe","sg_economy","cpf_medisave","healthcare","insurance","sgx_invest","mas_alerts"];
+if(!S.notifs)S.notifs={};
+if(S.notifs.digest===undefined)S.notifs.digest=true;
+if(S.notifs.fetch===undefined)S.notifs.fetch=true;
+if(S.notifs.masAlert===undefined)S.notifs.masAlert=true;
+if(S.notifs.highUrgency===undefined)S.notifs.highUrgency=true;
+if(!S.history)S.history=[];
 
 /* Check if already logged in */
 (async function(){
@@ -159,70 +178,29 @@ function saveHist(type,content){
 }
 
 /* ── Notifications ── */
-var _notifStatus="unknown";
-function updateNotifStatus(){
-  if(!("Notification" in window)){_notifStatus="unsupported"}
-  else{_notifStatus=Notification.permission}/* "default","granted","denied" */
-}
-updateNotifStatus();
-
-function reqNotifPerm(cb){
-  if(!("Notification" in window)){if(cb)cb(false);return}
-  if(Notification.permission==="granted"){if(cb)cb(true);return}
-  if(Notification.permission==="denied"){if(cb)cb(false);return}
-  Notification.requestPermission().then(function(p){
-    updateNotifStatus();R();
-    if(cb)cb(p==="granted");
-  });
-}
+var _notifOK=false;
+try{_notifOK="Notification" in window}catch(e){}
 
 function sendNotif(type,title,body){
-  if(!S.notifs[type])return;
-  if(!("Notification" in window)||Notification.permission!=="granted")return;
   try{
-    /* Try service worker notification first (works in background) */
-    if(navigator.serviceWorker&&navigator.serviceWorker.controller){
-      navigator.serviceWorker.ready.then(function(reg){
-        reg.showNotification(title,{body:body,icon:"icon-192.png",badge:"icon-192.png",tag:"newslens-"+type,renotify:true});
-      }).catch(function(){
-        /* Fallback to regular notification */
-        new Notification(title,{body:body,icon:"icon-192.png",badge:"icon-192.png",tag:"newslens-"+type});
-      });
-    }else{
-      new Notification(title,{body:body,icon:"icon-192.png",badge:"icon-192.png",tag:"newslens-"+type});
-    }
-  }catch(e){console.warn("Notif error:",e)}
+    if(!_notifOK||Notification.permission!=="granted")return;
+    if(S.notifs&&!S.notifs[type])return;
+    new Notification(title,{body:body,icon:"icon-192.png",tag:"nl-"+type});
+  }catch(e){console.warn("notif:",e)}
 }
 
 function testNotif(){
-  updateNotifStatus();
-  if(_notifStatus==="unsupported"){alert("Notifications not supported. Use Chrome or add to Home Screen on iPhone.");return}
-  if(_notifStatus==="denied"){alert("Notifications BLOCKED by your browser.\n\nTo fix:\nChrome: Click the lock icon next to the URL \u2192 Site settings \u2192 Notifications \u2192 Allow\nSafari: Settings \u2192 Websites \u2192 Notifications");return}
-  if(_notifStatus==="default"){
-    Notification.requestPermission().then(function(p){
-      updateNotifStatus();R();
-      if(p==="granted"){doTestNotif()}
-      else{alert("You need to tap 'Allow' when the browser asks. Try again.")}
-    });
+  if(!_notifOK){alert("Notifications not supported in this browser.\niPhone: Add to Home Screen first.");return}
+  if(Notification.permission==="denied"){alert("Notifications BLOCKED.\n\nChrome: Click lock icon \u{1F512} next to URL \u2192 Site settings \u2192 Notifications \u2192 Allow\n\nThen try again.");return}
+  if(Notification.permission==="granted"){
+    new Notification("\u{1F43E} NewsLens Test",{body:"Notifications are working!",icon:"icon-192.png"});
     return;
   }
-  doTestNotif();
-}
-function doTestNotif(){
-  try{
-    if(navigator.serviceWorker&&navigator.serviceWorker.controller){
-      navigator.serviceWorker.ready.then(function(reg){
-        reg.showNotification("\u{1F43E} NewsLens Test",{body:"Notifications are working! You'll receive alerts here.",icon:"icon-192.png",badge:"icon-192.png",tag:"newslens-test"});
-      }).catch(function(e){
-        /* SW notification failed, try direct */
-        try{new Notification("\u{1F43E} NewsLens Test",{body:"Notifications working (direct mode)",icon:"icon-192.png"})}
-        catch(e2){alert("Notification failed: "+e2.message)}
-      });
-    }else{
-      /* No SW controller, use direct notification */
-      new Notification("\u{1F43E} NewsLens Test",{body:"Notifications working! (SW not active yet \u2014 refresh page)",icon:"icon-192.png"});
-    }
-  }catch(e){alert("Notification error: "+e.message)}
+  /* Need to request permission */
+  Notification.requestPermission().then(function(p){
+    if(p==="granted"){new Notification("\u{1F43E} NewsLens Test",{body:"Notifications enabled!",icon:"icon-192.png"});R()}
+    else{alert("You need to tap Allow when asked.\nIf no popup appeared, notifications may be blocked at browser level.")}
+  });
 }
 
 function checkDigestNotif(dg){
@@ -327,7 +305,7 @@ async function doLogout(){
 
 /* ── Server fetch (uses server-stored keys) ── */
 async function doF(){
-  if(_notifStatus==="default")reqNotifPerm();
+  if(_notifOK&&Notification.permission==="default"){try{Notification.requestPermission()}catch(e){}}
   S.ld=true;S.fErr="";S.news={};R();startT();
   try{
     var d=await api("/fetch","POST");
@@ -565,16 +543,16 @@ rTimes();sh.appendChild(atBox);
 /* Notification Preferences */
 sh.appendChild(h("div",{style:"font-size:10px;font-weight:600;color:var(--t3);margin-bottom:4px"},"\u{1F514} Notification Preferences"));
 /* Status indicator */
-updateNotifStatus();
-var statusColor=_notifStatus==="granted"?"#22C55E":_notifStatus==="denied"?"#EF4444":"#F59E0B";
-var statusText=_notifStatus==="granted"?"\u2705 Notifications enabled":_notifStatus==="denied"?"\u{1F6AB} Blocked — tap Enable below":_notifStatus==="unsupported"?"\u26A0\uFE0F Not supported on this browser":"\u{1F514} Not yet enabled — tap Enable below";
+var nPerm=_notifOK?Notification.permission:"unsupported";
+var statusColor=nPerm==="granted"?"#22C55E":nPerm==="denied"?"#EF4444":"#F59E0B";
+var statusText=nPerm==="granted"?"\u2705 Notifications enabled":nPerm==="denied"?"\u{1F6AB} Blocked \u2014 see instructions below":!_notifOK?"\u26A0\uFE0F Not supported":"\u{1F514} Not yet enabled";
 sh.appendChild(h("div",{style:"padding:8px 12px;background:var(--cd);border:1px solid var(--bd);border-radius:8px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between"},
   h("div",{style:"font-size:11px;color:"+statusColor+";font-weight:600"},statusText),
   h("div",{style:"display:flex;gap:6px"},
-    _notifStatus!=="granted"?h("button",{style:"padding:5px 12px;background:var(--ac);color:#FFF;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer",onclick:function(){reqNotifPerm(function(ok){R()})}},"Enable"):null,
+    nPerm!=="granted"?h("button",{style:"padding:5px 12px;background:var(--ac);color:#FFF;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer",onclick:function(){testNotif()}},"Enable"):null,
     h("button",{style:"padding:5px 12px;background:var(--cd);color:var(--ac);border:1px solid var(--ac);border-radius:6px;font-size:10px;font-weight:700;cursor:pointer",onclick:testNotif},"Test \u{1F514}")
   )));
-if(_notifStatus==="unsupported")sh.appendChild(h("div",{style:"font-size:9px;color:var(--t3);margin-bottom:6px",textContent:"iPhone: Add to Home Screen first. Android: Use Chrome."}));
+if(!_notifOK)sh.appendChild(h("div",{style:"font-size:9px;color:var(--t3);margin-bottom:6px",textContent:"iPhone: Add to Home Screen first. Android: Use Chrome."}));
 var notifOpts=[
   {id:"masAlert",lb:"\u{1F6A8} MAS/CPF Regulatory Alerts",desc:"Notified when policy changes are detected"},
   {id:"highUrgency",lb:"\u{1F534} High Impact News",desc:"Any high-urgency article across all categories"},
@@ -596,7 +574,7 @@ sh.appendChild(h("button",{style:"width:100%;padding:12px;background:var(--ac);c
   if(S._ck){S.claudeKey=S._ck;sS("ck",S._ck)}
   sS("nm",S.advName);sS("ti",S.advTitle);sS("co",S.advCompany);sS("pn",S.advPhone);sS("em",S.advEmail);
   sS("nots",JSON.stringify(S.notifs));
-  reqNotifPerm();
+  if(_notifOK&&Notification.permission==="default"){try{Notification.requestPermission()}catch(e){}}
   /* Then sync to server */
   var serverOk=true;
   try{
@@ -931,7 +909,7 @@ if(newsArea&&S.tab==="news"&&!newsArea._ptrBound){
 function rCard(parent,it){
   var sel=!!S.sel.find(function(x){return x.title===it.title});
   var impLc=(it.impact||"").toLowerCase();
-  var card=h("div",{className:"card"+(sel?" sel":""),onclick:function(e){if(e.target.tagName==="BUTTON"||e.target.tagName==="A")return;togA(it)}});
+  var card=h("div",{className:"card"+(sel?" sel":""),onclick:function(){togA(it)}});
   if(sel)card.appendChild(h("div",{style:"position:absolute;top:7px;right:10px;color:var(--ac);font-weight:700",textContent:"\u2713"}));
   var badges=h("div",{style:"display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;align-items:center"});
   badges.appendChild(h("span",{className:"badge "+(impLc==="high"?"b-hi":impLc==="low"?"b-lo":"b-md")},impLc.toUpperCase()));
