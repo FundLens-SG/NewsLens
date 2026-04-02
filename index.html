@@ -67,7 +67,14 @@ try{_sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{storageKey:"newslens-a
 
 async function getSbToken(){
   if(!_sb)return"";
-  try{var s=await _sb.auth.getSession();return s.data.session?s.data.session.access_token:""}catch(e){return""}
+  try{
+    var s=await _sb.auth.getSession();
+    if(s.data&&s.data.session)return s.data.session.access_token;
+    /* Try refreshing */
+    var r=await _sb.auth.refreshSession();
+    if(r.data&&r.data.session)return r.data.session.access_token;
+    return"";
+  }catch(e){console.warn("Token error:",e);return""}
 }
 
 var S={claudeKey:gS("ck",""),
@@ -104,11 +111,27 @@ var CTX="You write for a Singapore financial advisor whose clients are 40-65yo S
 /* ── Server API calls (uses Supabase token) ── */
 async function api(path,method,body){
   var token=await getSbToken();
+  if(!token)throw new Error("Not authenticated. Please log out and log in again.");
   var opts={method:method||"GET",headers:{"Content-Type":"application/json","Authorization":"Bearer "+token}};
   if(body)opts.body=JSON.stringify(body);
   var res=await fetch(SERVER+path,opts);
   var d=await res.json();
-  if(!res.ok)throw new Error(d.error||"Server error "+res.status);
+  if(!res.ok){
+    if(res.status===401){
+      /* Token expired — try refreshing and retry once */
+      try{
+        var r=await _sb.auth.refreshSession();
+        if(r.data&&r.data.session){
+          opts.headers["Authorization"]="Bearer "+r.data.session.access_token;
+          var res2=await fetch(SERVER+path,opts);
+          var d2=await res2.json();
+          if(res2.ok)return d2;
+        }
+      }catch(e){}
+      throw new Error("Session expired. Please log out and log in again.");
+    }
+    throw new Error(d.error||"Server error "+res.status);
+  }
   return d;
 }
 
@@ -243,14 +266,21 @@ atBox.appendChild(h("div",{style:"font-size:9px;color:var(--t3);margin-top:4px",
 rTimes();sh.appendChild(atBox);
 
 sh.appendChild(h("button",{style:"width:100%;padding:12px;background:var(--ac);color:#FFF;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer",onclick:async function(){
-  /* Save keys + schedule + profile to server */
+  /* Save locally first */
+  if(S._ck){S.claudeKey=S._ck;sS("ck",S._ck)}
+  sS("nm",S.advName);sS("ti",S.advTitle);sS("co",S.advCompany);sS("pn",S.advPhone);sS("em",S.advEmail);
+  /* Then sync to server */
+  var serverOk=true;
   try{
-    if(S._gk||S._ck){await api("/keys","POST",{gemini:S._gk||undefined,claude:S._ck||undefined})}
-    if(S._ck){S.claudeKey=S._ck;sS("ck",S._ck)}
+    var keysPayload={};
+    if(S._gk)keysPayload.gemini=S._gk;
+    if(S._ck)keysPayload.claude=S._ck;
+    if(keysPayload.gemini||keysPayload.claude)await api("/keys","POST",keysPayload);
     await api("/schedule","POST",{times:S.schedule});
     await api("/profile","POST",{name:S.advName,title:S.advTitle,company:S.advCompany,phone:S.advPhone,advEmail:S.advEmail});
-    S.showSettings=false;R();
-  }catch(e){alert("Save failed: "+e.message)}}
+  }catch(e){serverOk=false;console.warn("Server sync failed:",e.message)}
+  S.showSettings=false;R();
+  if(!serverOk){setTimeout(function(){alert("Settings saved locally. Server sync will retry on next save. If this persists, try logging out and back in.")},200)}}
 },"Save All \u{1F43E}"));
 sh.appendChild(h("button",{style:"width:100%;padding:10px;background:none;color:#F87171;font-size:12px;font-weight:600;cursor:pointer;margin-top:8px",onclick:doLogout},"Logout"));
 ov.appendChild(sh);root.appendChild(ov)}
