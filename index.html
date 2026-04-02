@@ -358,28 +358,87 @@ function mkWA(a,tn,nm){return claude("You are "+JSON.stringify(nm||"Advisor")+",
 async function doNL(){
   if(!S.sel.length)return;S.gP=true;S.oE="";S.tab="pdf";R();startT();
   try{
-    var articles=S.sel.map(function(a){return{title:a.title,summary:a.summary,source:a.source,impact:a.impact,key_figures:a.key_figures,audience:a.audience,_c:a._c}});
+    var articles=S.sel.map(function(a){return{title:a.title,summary:a.summary,source:a.source,impact:a.impact,key_figures:a.key_figures,_c:a._c}});
+    /* Ask Claude for analytical content only — simple flat JSON */
+    var raw=await claude("Analyze these news articles for a Singapore financial advisor newsletter.\n\nArticles:\n"+JSON.stringify(articles)+"\n\nReturn ONLY this JSON (no markdown):\n{\"headline\":\"Synthesized theme headline\",\"lead\":\"4-5 sentence editorial analysis connecting the dots. Include specific numbers.\",\"insights\":[\"3 actionable insights for clients with specific data\"],\"watch\":[\"3 things to monitor with specific levels/dates\"],\"snap\":[{\"label\":\"short label\",\"value\":\"+0.7%\",\"dir\":\"up\"}],\"items\":[{\"title\":\"article title\",\"analysis\":\"2-3 sentence WHY it matters analysis\",\"data\":\"key stat\",\"src\":\"source\",\"impact\":\"high\"}]}\nsnap: 3-4 key market numbers. dir: up/down/flat. Be analytical. ONLY JSON.");
+    var ct=pObj(raw);
+    if(!ct)throw new Error("Analysis failed. Try again.");
+
     var dt=new Date().toLocaleDateString("en-SG",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
-    var ph=S.advPhoto?'<img src="'+S.advPhoto+'" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3)"/>':'<div style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;color:#FFF;font-size:24px;font-weight:700">'+(S.advName?S.advName.charAt(0):"?")+'</div>';
-    var contactLine="";if(S.advPhone)contactLine+=S.advPhone;if(S.advEmail)contactLine+=(contactLine?" | ":"")+S.advEmail;
+    var ph=S.advPhoto?'<img src="'+S.advPhoto+'" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.25)"/>':'<div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;color:#FFF;font-size:22px;font-weight:700">'+(S.advName?S.advName.charAt(0):"?")+'</div>';
+    var cL="";if(S.advPhone)cL+=S.advPhone;if(S.advEmail)cL+=(cL?" \u00B7 ":"")+S.advEmail;
+    var iC={high:"#DC2626",medium:"#D97706",low:"#16A34A"};
 
-    var prompt='You are a world-class newsletter designer AND senior financial analyst. Generate a COMPLETE, BEAUTIFUL HTML newsletter.\n\nAdvisor: '+JSON.stringify(S.advName||"Advisor")+'\nTitle: '+JSON.stringify(S.advTitle||"")+'\nCompany: '+JSON.stringify(S.advCompany||"")+'\nDate: '+dt+'\nContact: '+contactLine+'\n\nArticles:\n'+JSON.stringify(articles)+'\n\nGenerate a COMPLETE HTML document (<!DOCTYPE html> to </html>) for a private banking newsletter.\n\nDESIGN REQUIREMENTS:\n1. MASTHEAD: Dark gradient header with advisor photo placeholder text "[PHOTO]", name, title, company. Right side: newsletter title + date.\n2. HERO SECTION: Synthesize the TOP story with a bold headline. Include an inline SVG visualization — a simple bar chart, gauge, or arrow graphic that represents the key data point (e.g., market direction, percentage change). Use SVG <rect>, <circle>, <text>, <line> elements.\n3. KEY DEVELOPMENTS: For each category, create a visually distinct section with:\n   - Colored header bar with category name\n   - Each article gets an SVG impact indicator (red/yellow/green circle) \n   - Analysis text (not just summary — explain WHY it matters)\n   - Key data callout in a highlighted box\n4. INFOGRAPHIC SECTION: Create a visual summary using inline SVG — show 3-4 key numbers in large, bold graphic cards (think Bloomberg terminal style). Example: big number "S&P +0.7%" with a small up-arrow SVG.\n5. WHAT THIS MEANS: 3-4 actionable insights with left-border accent\n6. WHAT TO WATCH: Amber/yellow callout box with forward-looking items\n7. DISCLAIMER + footer with contact info and "Prepared with NewsLens"\n\nSTYLE RULES:\n- Font: Georgia for headlines, Helvetica/Arial for body\n- Colors: Dark navy masthead (#0F2847), white body, accent color based on dominant category\n- Professional private banking aesthetic — think UBS or Julius Baer quarterly report\n- ALL SVG must be inline (no external images)\n- Print-friendly: @page{size:A4;margin:0} @media print{-webkit-print-color-adjust:exact}\n- NEVER use alarming language. Frame everything positively.\n\nThe "[PHOTO]" text will be replaced programmatically. Output ONLY the complete HTML. No markdown, no explanation.';
+    var H='<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}@page{size:A4;margin:0}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}body{font-family:Georgia,"Times New Roman",serif;color:#1E293B;font-size:12px;line-height:1.6;background:#FFF}h1,h2,h3,h4,h5{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;line-height:1.25}.sf{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}.container{max-width:680px;margin:0 auto}</style></head><body>';
 
-    var html=await claude(prompt);
-    /* Clean markdown fences if any */
-    html=html.replace(/```html/gi,"").replace(/```/g,"").trim();
-    /* Inject actual photo */
-    html=html.replace(/\[PHOTO\]/g,ph);
-    /* Open in new window */
+    /* MASTHEAD */
+    H+='<div style="background:linear-gradient(135deg,#0F2847,#1A365D);padding:24px 32px;color:#FFF"><div class="container" style="display:flex;align-items:center;justify-content:space-between">'+
+    '<div style="display:flex;align-items:center;gap:14px">'+ph+'<div><h2 style="font-size:17px;font-weight:700;margin:0">'+(S.advName||"Advisor")+'</h2><div class="sf" style="font-size:10px;opacity:0.6;margin-top:2px">'+(S.advTitle||"")+(S.advCompany?" \u00B7 "+S.advCompany:"")+'</div></div></div>'+
+    '<div style="text-align:right"><div class="sf" style="font-size:8px;text-transform:uppercase;letter-spacing:2px;opacity:0.35">Private Client Briefing</div><h1 style="font-size:20px;font-weight:700;margin:4px 0 0">Market Intelligence</h1><div class="sf" style="font-size:9px;opacity:0.5;margin-top:2px">'+dt+'</div></div></div></div>';
+    H+='<div style="height:3px;background:linear-gradient(90deg,#2563EB,#0EA5E9,#06B6D4)"></div>';
+
+    /* LEAD STORY */
+    H+='<div class="container" style="padding:24px 32px 20px;border-bottom:1px solid #E2E8F0">';
+    H+='<h4 class="sf" style="color:#2563EB;font-size:9px;text-transform:uppercase;letter-spacing:2px;margin:0 0 10px">THE BIG PICTURE</h4>';
+    H+='<h2 style="font-size:21px;font-weight:700;color:#0F172A;margin:0 0 10px">'+(ct.headline||"")+'</h2>';
+    H+='<p style="font-size:13px;color:#334155;line-height:1.7;margin:0">'+(ct.lead||"")+'</p></div>';
+
+    /* MARKET SNAPSHOT */
+    if(ct.snap&&ct.snap.length){
+      H+='<div class="container" style="padding:16px 32px;border-bottom:1px solid #E2E8F0;background:#F8FAFC">';
+      H+='<div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap">';
+      ct.snap.forEach(function(s){
+        var col=s.dir==="up"?"#16A34A":s.dir==="down"?"#DC2626":"#64748B";
+        var arrow=s.dir==="up"?"\u25B2":s.dir==="down"?"\u25BC":"\u25AC";
+        H+='<div style="text-align:center;min-width:100px;padding:10px 16px;background:#FFF;border:1px solid #E2E8F0;border-radius:8px">';
+        H+='<div class="sf" style="font-size:22px;font-weight:800;color:'+col+'"><span style="font-size:13px">'+arrow+'</span> '+s.value+'</div>';
+        H+='<div class="sf" style="font-size:8px;text-transform:uppercase;letter-spacing:1px;color:#94A3B8;margin-top:2px">'+s.label+'</div></div>';
+      });
+      H+='</div></div>';
+    }
+
+    /* ARTICLES */
+    H+='<div class="container" style="padding:20px 32px">';
+    (ct.items||[]).forEach(function(it,idx){
+      var impCol=iC[(it.impact||"").toLowerCase()]||"#94A3B8";
+      H+='<div style="margin-bottom:14px;padding:14px 16px;background:#FFF;border:1px solid #E2E8F0;border-radius:8px;border-left:4px solid '+impCol+'">';
+      H+='<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
+      H+='<h3 class="sf" style="font-size:13.5px;font-weight:700;color:#0F172A;margin:0 0 6px;flex:1">'+it.title+'</h3>';
+      H+='<span class="sf" style="flex-shrink:0;padding:2px 8px;border-radius:4px;font-size:8px;font-weight:800;color:#FFF;background:'+impCol+'">'+(it.impact||"").toUpperCase()+'</span></div>';
+      H+='<p style="font-size:11.5px;color:#475569;line-height:1.6;margin:0">'+it.analysis+'</p>';
+      if(it.data)H+='<div class="sf" style="margin-top:8px;padding:5px 10px;background:#EFF6FF;border-radius:4px;font-size:10.5px;color:#1E40AF;font-weight:600">\u{1F4C8} '+it.data+'</div>';
+      H+='<div class="sf" style="margin-top:5px;font-size:9px;color:#94A3B8">'+it.src+'</div>';
+      H+='</div>';
+    });
+
+    /* WHAT THIS MEANS */
+    if(ct.insights&&ct.insights.length){
+      H+='<div style="background:#0F172A;color:#FFF;padding:18px 20px;border-radius:8px;margin-bottom:14px">';
+      H+='<h4 class="sf" style="color:#60A5FA;font-size:9px;text-transform:uppercase;letter-spacing:2px;margin:0 0 10px">WHAT THIS MEANS FOR YOU</h4>';
+      ct.insights.forEach(function(p){H+='<div style="margin-bottom:8px;padding-left:12px;border-left:3px solid #3B82F6;font-size:11.5px;line-height:1.6;color:#E2E8F0" class="sf">'+p+'</div>'});
+      H+='</div>';
+    }
+
+    /* WHAT TO WATCH */
+    if(ct.watch&&ct.watch.length){
+      H+='<div style="background:#FFFBEB;border:1px solid #FDE68A;padding:14px 16px;border-radius:8px;margin-bottom:14px">';
+      H+='<h4 class="sf" style="color:#92400E;font-size:9px;text-transform:uppercase;letter-spacing:2px;margin:0 0 8px">\u{1F440} WHAT TO WATCH</h4>';
+      ct.watch.forEach(function(p){H+='<div class="sf" style="margin-bottom:5px;font-size:11px;color:#78350F;line-height:1.5">\u2022 '+p+'</div>'});
+      H+='</div>';
+    }
+
+    /* DISCLAIMER + FOOTER */
+    H+='<div style="padding:10px 14px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:6px;margin-bottom:12px"><p class="sf" style="font-size:8.5px;color:#94A3B8;line-height:1.5;margin:0"><strong style="color:#64748B">Important:</strong> For informational purposes only. Not financial advice. Consult your advisor before making decisions.</p></div>';
+    H+='<div style="display:flex;justify-content:space-between;align-items:center" class="sf"><div style="font-size:9px;color:#94A3B8">'+cL+'</div><div style="font-size:8px;color:#CBD5E1">\u{1F43E} Prepared with NewsLens</div></div>';
+    H+='</div></body></html>';
+
     var w=window.open("","_blank");
-    if(w){w.document.write(html);w.document.close();setTimeout(function(){w.print()},800)}
-    else{throw new Error("Popup blocked. Allow popups for this site.")}
-    saveHist("PDF","Newsletter generated with "+articles.length+" articles");
+    if(w){w.document.write(H);w.document.close();setTimeout(function(){w.print()},800)}
+    else throw new Error("Popup blocked. Allow popups for this site.");
+    saveHist("PDF","Newsletter: "+(ct.headline||""));
   }catch(e){S.oE=e.message}
   S.gP=false;stopT();R();
 }
-
-/* ── Client Follow-up Replies ── */
 
 /* ── Client Follow-up Replies — AI predicts what clients will ask ── */
 async function genReplies(articles){
