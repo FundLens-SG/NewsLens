@@ -119,7 +119,7 @@ history:jP(gS("hist","[]"),[]),
 notifs:jP(gS("nots","{}"),{digest:true,fetch:true,masAlert:true,highUrgency:true}),
 news:{},sel:[],ld:false,fErr:"",tab:"news",tone:"professional",segF:"all",
 showSettings:false,showHelp:false,showLogin:true,loginMode:"login",loginErr:"",loginBusy:false,
-comm:"",gC:false,waM:"",gW:false,gP:false,gX:false,pptxStyle:"professional",oE:"",timer:0,copied:false,userEmail:""};
+comm:"",gC:false,waM:"",gW:false,gP:false,oE:"",timer:0,copied:false,userEmail:""};
 
 /* Ensure defaults */
 if(!S.aC||!S.aC.length)S.aC=["global_markets","geopolitics","gold_safe","sg_economy","cpf_medisave","healthcare","insurance","sgx_invest","mas_alerts"];
@@ -381,25 +381,13 @@ function renderNL(content){
   var w=window.open("","_blank");if(w){w.document.write(H);w.document.close();setTimeout(function(){w.print()},600)}
 }
 
-/* ── Claude-powered PPTX ── */
-function mkPptx(articles,style){
-  var sp=style==="cta"?
-    "STYLE: Call-To-Action Driven.\n- Every slide MUST end with 1-2 clear action items\n- Use strong verbs: 'Review client portfolios for...', 'Schedule conversations about...', 'Consider rebalancing towards...'\n- Make it practical: what should the advisor DO on Monday morning?":
-    "STYLE: Professional Analytical.\n- Lead every slide with the KEY NUMBER\n- Explain the 'so what' — why does this data point matter?\n- Measured, authoritative tone like a Goldman Sachs research note\n- End each slide with an outlook statement";
-  var prompt="You are a HEAD OF RESEARCH at a top wealth management firm creating a client-facing presentation deck.\n\n"+sp+"\n\n"+CTX+getTimeCtx()+"\n\nArticles:\n"+JSON.stringify(articles.map(function(a){return{title:a.title,summary:a.summary,source:a.source,impact:a.impact,key_figures:a.key_figures}}))+"\n\nGenerate a COMPELLING, STORY-DRIVEN presentation. Each slide should build a NARRATIVE.\n\nReturn ONLY JSON:\n{\n\"title\": \"Engaging analytical title. NOT just 'Market Brief'. Example: 'Equities Rally on Peace Hopes — Positioning for What Comes Next'\",\n\"subtitle\": \""+new Date().toLocaleDateString("en-SG",{day:"numeric",month:"long",year:"numeric"})+"\",\n\"slides\": [\n  {\n    \"title\": \"Analytical headline with a TAKE (not just a topic). Example: 'US Markets Signal Confidence — But Oil Tells a Different Story'\",\n    \"bullets\": [\n      \"Each bullet is 2 sentences of ANALYSIS with specific data. Example: 'S&P 500 rose 0.7% to 5,847 as investors priced in a potential ceasefire. The rally was broad-based, with the Nasdaq 100 gaining 1.2%.'\",\n      \"Explain the IMPLICATION. Example: 'For SG investors with US equity exposure, this rally reduces the recent drawdown. However, the two-year Treasury yield at 3.81% suggests the market still expects rates to stay elevated.'\",\n      \"Include a FORWARD-LOOKING statement. Example: 'Key level to watch: S&P 500 resistance at 5,900. A break above could signal the start of a new leg higher.'\"\n    ],\n    \"impact\": \"high\",\n    \"data_highlight\": \"THE most important number for this slide — e.g. 'S&P 500 +0.7% | Nasdaq +1.2% | Brent crude -US$101/bbl'\",\n    \"source\": \"Bloomberg, Reuters\"\n  }\n],\n\"summary_slide\": {\n  \"title\": \"Key Takeaways\",\n  \"bullets\": [\"4 synthesized insights that TIE EVERYTHING TOGETHER. Not repetition — higher-level conclusions that connect the dots across all slides.\"]\n},\n\"disclaimer\": \"This presentation is for informational purposes only and does not constitute financial advice. Past performance is not indicative of future results.\"\n}\n\n5-7 content slides. Be analytical, not descriptive. Include specific numbers everywhere. ONLY return valid JSON.";
-  return claude(prompt).then(pObj);
+/* ── Client Follow-up Replies — AI predicts what clients will ask ── */
+async function genReplies(articles){
+  var prompt="You are "+JSON.stringify(S.advName||"a financial advisor")+", SG advisor for clients aged 40-65.\n"+CTX+getTimeCtx()+getStyleCtx()+getLangCtx()+"\n\nYou just sent these articles to your clients:\n"+JSON.stringify(articles.map(function(a){return{title:a.title,summary:a.summary,key_figures:a.key_figures}}))+"\n\nPredict the TOP 5 questions your clients will ask, and write a ready-to-send WhatsApp reply for each.\n\nReturn ONLY JSON array:\n[\n{\"question\":\"Client's likely question\",\"reply\":\"Your ready-to-paste WhatsApp reply (1-3 sentences, warm, specific, with numbers)\"}\n]\n\nMake questions realistic — things a 50-year-old Singaporean investor would actually ask. Replies should be reassuring but honest. ONLY JSON array.";
+  var raw=await claude(prompt);
+  return pObj(raw);
 }
 
-async function buildPptx(ct){
-  if(!window.PptxGenJS){await new Promise(function(rs,rj){var s=document.createElement("script");s.src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";s.onload=rs;s.onerror=function(){rj(new Error("Failed to load PptxGenJS"))};document.head.appendChild(s)})}
-  var pr=new PptxGenJS();pr.layout="LAYOUT_16x9";var P="1E293B",SC="CBD5E1",A="0EA5E9",D="0F1219",L="F8FAFC",M="64748B";
-  var s1=pr.addSlide();s1.background={color:D};s1.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.08,fill:{color:A}});s1.addText(ct.title||"Market Brief",{x:0.8,y:0.8,w:8.4,h:1.8,fontSize:32,fontFace:"Georgia",color:"FFFFFF",bold:true});s1.addText(ct.subtitle||"",{x:0.8,y:2.8,w:8.4,h:0.6,fontSize:16,fontFace:"Calibri",color:SC});if(S.advName)s1.addText("Prepared by "+S.advName+(S.advCompany?" \u00B7 "+S.advCompany:""),{x:0.8,y:4.5,w:8.4,h:0.5,fontSize:11,fontFace:"Calibri",color:M,italic:true});
-  var ic={high:"DC2626",medium:"D97706",low:"16A34A"};
-  (ct.slides||[]).forEach(function(sl,i){var sd=pr.addSlide();sd.background={color:L};sd.addShape(pr.shapes.RECTANGLE,{x:0,y:0,w:10,h:0.06,fill:{color:P}});sd.addShape(pr.shapes.RECTANGLE,{x:8.1,y:0.25,w:1.5,h:0.4,fill:{color:ic[sl.impact]||M},rectRadius:0.05});sd.addText((sl.impact||"").toUpperCase(),{x:8.1,y:0.25,w:1.5,h:0.4,fontSize:10,fontFace:"Calibri",color:"FFFFFF",bold:true,align:"center",valign:"middle"});sd.addText(sl.title||"",{x:0.6,y:0.2,w:7.2,h:0.7,fontSize:20,fontFace:"Georgia",color:P,bold:true});if(sl.data_highlight){sd.addShape(pr.shapes.RECTANGLE,{x:0.6,y:1.1,w:8.5,h:0.7,fill:{color:"EFF6FF"},rectRadius:0.05});sd.addText("\u{1F4C8} "+sl.data_highlight,{x:0.9,y:1.1,w:8,h:0.7,fontSize:14,fontFace:"Calibri",color:"1E40AF",bold:true,valign:"middle"})}var by=sl.data_highlight?2.1:1.1;var bi=(sl.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<(sl.bullets||[]).length-1,color:"334155",fontSize:12,fontFace:"Calibri",lineSpacingMultiple:1.4}}});if(bi.length)sd.addText(bi,{x:0.6,y:by,w:8.5,h:3,paraSpaceAfter:8});if(sl.source)sd.addText("Source: "+sl.source,{x:0.6,y:5.1,w:9,h:0.3,fontSize:9,fontFace:"Calibri",color:M,italic:true,align:"right"})});
-  if(ct.summary_slide){var ss=pr.addSlide();ss.background={color:P};ss.addText(ct.summary_slide.title||"Key Takeaways",{x:0.8,y:0.4,w:8.4,h:0.7,fontSize:26,fontFace:"Georgia",color:"FFFFFF",bold:true});ss.addShape(pr.shapes.RECTANGLE,{x:0.8,y:1.2,w:2,h:0.04,fill:{color:A}});var si=(ct.summary_slide.bullets||[]).map(function(b,j){return{text:b,options:{bullet:true,breakLine:j<(ct.summary_slide.bullets||[]).length-1,color:SC,fontSize:14,fontFace:"Calibri",lineSpacingMultiple:1.5}}});if(si.length)ss.addText(si,{x:0.8,y:1.7,w:8.4,h:3.2,paraSpaceAfter:10})}
-  var ds=pr.addSlide();ds.background={color:D};ds.addText(ct.disclaimer||"For informational purposes only.",{x:0.8,y:1.8,w:8.4,h:1.5,fontSize:13,fontFace:"Calibri",color:SC,lineSpacingMultiple:1.5});if(S.advName)ds.addText(S.advName+(S.advCompany?" \u00B7 "+S.advCompany:""),{x:0.8,y:4,w:8.4,h:0.5,fontSize:11,fontFace:"Calibri",color:M});
-  return pr;
-}
 function togC(id){var i=S.aC.indexOf(id);if(i>=0)S.aC.splice(i,1);else S.aC.push(id);sS("cats",JSON.stringify(S.aC));R()}
 function togA(a){var i=S.sel.findIndex(function(x){return x.title===a.title});if(i>=0)S.sel.splice(i,1);else S.sel.push(a);R()}
 function cp(t){navigator.clipboard.writeText(t);S.copied=true;R();setTimeout(function(){S.copied=false;R()},2000)}
@@ -464,7 +452,7 @@ async function askArticle(question){
 async function doCm(){if(!S.sel.length)return;S.gC=true;S.oE="";S.tab="commentary";R();startT();try{S.comm=await mkComm(S.sel,S.advName);saveHist("Brief",S.comm)}catch(e){S.oE=e.message}S.gC=false;stopT();R()}
 async function doWA(){if(!S.sel.length)return;S.gW=true;S.oE="";S.tab="whatsapp";R();startT();try{S.waM=await mkWA(S.sel,S.tone,S.advName);saveHist("WhatsApp",S.waM)}catch(e){S.oE=e.message}S.gW=false;stopT();R()}
 async function doNL(){if(!S.sel.length)return;S.gP=true;S.oE="";S.tab="pdf";R();startT();try{var c=await genNLContent(S.sel);if(!c)throw new Error("Claude returned empty. Try again.");renderNL(c);saveHist("PDF",c.lead_title+" - "+(c.what_it_means||[]).join("; "))}catch(e){S.oE=e.message}S.gP=false;stopT();R()}
-async function doPx(){if(!S.sel.length)return;S.gX=true;S.oE="";S.tab="pptx";R();startT();try{var c=await mkPptx(S.sel,S.pptxStyle);if(!c)throw new Error("Claude returned empty. Try again.");var p=await buildPptx(c);await p.writeFile({fileName:"Brief_"+new Date().toISOString().slice(0,10)+".pptx"})}catch(e){S.oE=e.message}S.gX=false;stopT();R()}
+async function doReplies(){if(!S.sel.length)return;S._repLoading=true;S._replies=null;S.oE="";S.tab="replies";R();startT();try{var r=await genReplies(S.sel);if(!r||!r.length)throw new Error("No replies generated. Try again.");S._replies=r;saveHist("Replies",r.map(function(x){return"Q: "+x.question+"\nA: "+x.reply}).join("\n\n"))}catch(e){S.oE=e.message}S._repLoading=false;stopT();R()}
 
 /* ── Render ── */
 function h(tag,at){var el=document.createElement(tag);if(at)Object.keys(at).forEach(function(k){if(k==="onclick"||k==="oninput"||k==="onchange")el[k]=at[k];else if(k==="className")el.className=at[k];else if(k==="innerHTML")el.innerHTML=at[k];else if(k==="textContent")el.textContent=at[k];else el.setAttribute(k,at[k])});var ch=Array.prototype.slice.call(arguments,2);ch.forEach(function(c){if(c==null)return;if(typeof c==="string")el.appendChild(document.createTextNode(c));else if(Array.isArray(c))c.forEach(function(x){if(x)el.appendChild(x)});else el.appendChild(c)});return el}
@@ -494,7 +482,7 @@ var allA=S.aC.reduce(function(a,id){return a.concat(S.news[id]||[])},[]);
 var fA=S.segF==="all"?allA:allA.filter(function(a){return a.audience===S.segF});
 function impVal(x){return IMP[(x||"").toLowerCase()]===undefined?2:IMP[(x||"").toLowerCase()]}
 var sorted=S.sortMode==="priority"?fA.slice().sort(function(a,b){return impVal(a.impact)-impVal(b.impact)}):fA;
-var anyG=S.gC||S.gW||S.gP||S.gX;var tS=S.timer>0?" ("+S.timer+"s)":"";
+var anyG=S.gC||S.gW||S.gP||S._repLoading;var tS=S.timer>0?" ("+S.timer+"s)":"";
 
 /* ── SETTINGS ── */
 if(S.showSettings){
@@ -664,7 +652,7 @@ var steps=[
 {icon:"\u23F0",title:"Step 2: Set auto-fetch times",desc:"In \u2699\uFE0F Settings, add up to 5 SGT times (e.g. 08:00). The server fetches using YOUR keys automatically \u2014 even when your phone is off."},
 {icon:"\u{1F4F0}",title:"Step 3: Read your news",desc:"Two sort modes:\n\u{1F4C1} Category \u2192 Urgency: Groups by topic, most urgent first within each\n\u{1F6A8} Urgency First: Flat list, highest impact at top across all categories\nFilter by client segment: Pre-Retiree, Retiree, HNW."},
 {icon:"\u2705",title:"Step 4: Select articles",desc:"Tap cards to select. 'All' selects everything. Pick specific stories for a targeted broadcast."},
-{icon:"\u{1F4AC}",title:"Step 5: Generate & share",desc:"\u{1F4AC} Brief = market commentary\n\u{1F4F1} WA = WhatsApp broadcast\n\u{1F4F0} PDF = private banking-style newsletter with your photo\n\u{1F4CA} PPTX = presentation deck\nAll written in your name with a calm, positive tone."},
+{icon:"\u{1F4AC}",title:"Step 5: Generate & share",desc:"\u{1F4AC} Brief = market commentary\n\u{1F4F1} WA = WhatsApp broadcast\n\u{1F4F0} PDF = private banking-style newsletter\n\u{1F5E3}\uFE0F Replies = AI predicts what clients will ask + ready-to-paste answers\n\u26A1 Morning Broadcast = one tap, auto-selects top stories, generates WA"},
 {icon:"\u{1F4F1}",title:"Step 6: One-tap WhatsApp",desc:"After generating, tap 'Open in WhatsApp' to share directly to your broadcast list. Copy/Back buttons stay pinned at the top."},
 {icon:"\u{1F4A1}",title:"Good to know",desc:"\u2022 News is enriched by Claude AI for clearer summaries\n\u2022 Never uses alarming language for your clients\n\u2022 Your API keys are stored securely on the server\n\u2022 Tap ? anytime to see these instructions again"}
 ];
@@ -714,7 +702,7 @@ root.appendChild(hdr);
 
 /* Tabs */
 var tb=h("div",{className:"tabs"});
-[{id:"news",lb:"News"+(allA.length?" ("+allA.length+")":"")},{id:"commentary",lb:"Brief"},{id:"whatsapp",lb:"WA"},{id:"pdf",lb:"\u{1F4F0} PDF"},{id:"pptx",lb:"\u{1F4CA} PPTX"},{id:"history",lb:"\u{1F4CB} History"}].forEach(function(t){
+[{id:"news",lb:"News"+(allA.length?" ("+allA.length+")":"")},{id:"commentary",lb:"Brief"},{id:"whatsapp",lb:"WA"},{id:"pdf",lb:"\u{1F4F0} PDF"},{id:"replies",lb:"\u{1F4AC} Replies"},{id:"history",lb:"\u{1F4CB} History"}].forEach(function(t){
 tb.appendChild(h("button",{className:"tab"+(S.tab===t.id?" on":""),onclick:function(){S.tab=t.id;R()}},t.lb))});
 root.appendChild(tb);
 
@@ -809,7 +797,7 @@ items.forEach(function(it){rCard(ct,it)})})}
 if(!allA.length&&!S.ld&&!S.fErr){ct.appendChild(h("div",{style:"text-align:center;padding:30px;color:var(--t3)"},h("img",{src:ICON,style:"width:48px;height:48px;margin-bottom:8px;opacity:0.5"}),h("div",{style:"font-size:13px;font-weight:600",textContent:"Tap Fetch or wait for auto-fetch"}),h("button",{style:"background:none;border:none;color:var(--ac);font-size:12px;font-weight:600;margin-top:8px;cursor:pointer",onclick:function(){S.showHelp=true;R()},textContent:"Need help? Tap here"})))}
 
 if(S.sel.length>0){var bar=h("div",{className:"act-bar"});bar.appendChild(h("span",{style:"font-size:11px;font-weight:600;color:var(--t2)"},S.sel.length+""));bar.appendChild(h("div",{style:"flex:1"}));
-[{fn:doCm,bg:"#1E293B",lb:"\u{1F4AC} Brief"},{fn:doWA,bg:"#25D366",lb:"\u{1F4F1} WA"},{fn:doNL,bg:"#0891B2",lb:"\u{1F4F0} PDF"},{fn:doPx,bg:"#7C3AED",lb:"\u{1F4CA} PPTX"}].forEach(function(b){
+[{fn:doCm,bg:"#1E293B",lb:"\u{1F4AC} Brief"},{fn:doWA,bg:"#25D366",lb:"\u{1F4F1} WA"},{fn:doNL,bg:"#0891B2",lb:"\u{1F4F0} PDF"},{fn:doReplies,bg:"#7C3AED",lb:"\u{1F5E3}\uFE0F Replies"}].forEach(function(b){
 bar.appendChild(h("button",{className:"abtn",style:"background:"+b.bg,onclick:anyG?null:b.fn},b.lb))});ct.appendChild(bar)}}
 
 function rOut(g,er,tx,ei,et,bub,retryFn){
@@ -825,24 +813,24 @@ if(S.tab==="pdf"){
   else if(S.oE)ct.appendChild(h("div",{className:"err-msg"},S.oE));
   else{ct.appendChild(h("div",{style:"text-align:center;padding:30px;color:var(--t3)"},h("div",{style:"font-size:30px;margin-bottom:6px",textContent:"\u{1F4F0}"}),h("div",{style:"font-size:12px",textContent:"Select articles, tap \u{1F4F0} PDF"})))}
   ct.appendChild(h("button",{style:"padding:8px 14px;background:var(--cd);color:var(--t2);border:1px solid var(--bd);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:10px",onclick:function(){S.tab="news";R()}},"Back"))}
-if(S.tab==="pptx"){
-  if(S.gX){var sp3=h("div",{style:"text-align:center;padding:30px"});sp3.appendChild(h("div",{className:"spinner"}));sp3.appendChild(h("div",{style:"font-size:13px;color:var(--t2)"},"\u{1F43E} Generating..."+tS));ct.appendChild(sp3)}
-  else if(S.oE){ct.appendChild(h("div",{className:"err-msg"},S.oE));ct.appendChild(h("button",{style:"padding:8px 14px;background:var(--ac);color:#FFF;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:8px",onclick:doPx},"Try Again"))}
-  else{
-    ct.appendChild(h("div",{style:"text-align:center;padding:20px;color:var(--t3)"},h("div",{style:"font-size:30px;margin-bottom:8px",textContent:"\u{1F4CA}"}),h("div",{style:"font-size:13px;font-weight:600",textContent:"Choose a presentation style:"})));
-    /* Style picker */
-    var stylePick=h("div",{style:"display:flex;gap:10px;margin:12px 0 16px;justify-content:center"});
-    [{id:"professional",lb:"\u{1F4CA} Professional Informative",desc:"Data-focused, analytical, measured"},{id:"cta",lb:"\u26A1 Call To Action",desc:"Action-oriented, what to discuss with clients"}].forEach(function(st){
-      var isOn=S.pptxStyle===st.id;
-      var card=h("div",{style:"flex:1;max-width:200px;padding:14px;background:"+(isOn?"var(--ac)":"var(--cd)")+";border:2px solid "+(isOn?"var(--ac)":"var(--bd)")+";border-radius:12px;cursor:pointer;text-align:center;transition:all 0.15s",onclick:function(){S.pptxStyle=st.id;R()}});
-      card.appendChild(h("div",{style:"font-size:13px;font-weight:700;color:"+(isOn?"#FFF":"var(--tx)")+";margin-bottom:4px",textContent:st.lb}));
-      card.appendChild(h("div",{style:"font-size:10px;color:"+(isOn?"rgba(255,255,255,0.7)":"var(--t3)"),textContent:st.desc}));
-      stylePick.appendChild(card);
+/* ── CLIENT REPLIES TAB ── */
+if(S.tab==="replies"){
+  if(S._repLoading){var sp3=h("div",{style:"text-align:center;padding:30px"});sp3.appendChild(h("div",{className:"spinner"}));sp3.appendChild(h("div",{style:"font-size:13px;color:var(--t2)"},"\u{1F43E} Predicting client questions..."+tS));ct.appendChild(sp3)}
+  else if(S.oE){ct.appendChild(h("div",{className:"err-msg"},S.oE));ct.appendChild(h("button",{style:"padding:8px 14px;background:var(--ac);color:#FFF;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;margin-top:8px",onclick:doReplies},"Try Again"))}
+  else if(S._replies&&S._replies.length){
+    ct.appendChild(h("div",{style:"font-size:14px;font-weight:700;margin-bottom:4px"},"\u{1F5E3}\uFE0F Client Will Probably Ask..."));
+    ct.appendChild(h("div",{style:"font-size:10px;color:var(--t3);margin-bottom:12px"},"Ready-to-paste replies. Tap Copy on any reply to use it instantly."));
+    S._replies.forEach(function(r,idx){
+      var card=h("div",{style:"background:var(--cd);border:1px solid var(--bd);border-radius:var(--r);padding:12px;margin-bottom:8px"});
+      card.appendChild(h("div",{style:"font-size:12px;font-weight:700;color:#F59E0B;margin-bottom:8px"},"\u{1F64B} \""+r.question+"\""));
+      card.appendChild(h("div",{style:"background:#111D15;border-radius:0 10px 10px 10px;padding:10px 12px;font-size:12px;line-height:1.6;color:#C8E6D0;border:1px solid #263830"},r.reply));
+      var acts=h("div",{style:"display:flex;gap:6px;margin-top:8px"});
+      acts.appendChild(h("button",{style:"padding:5px 12px;background:var(--ac);color:#FFF;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer",onclick:function(){cp(r.reply)}},"Copy Reply"));
+      acts.appendChild(h("button",{style:"padding:5px 12px;background:#25D366;color:#FFF;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer",onclick:function(){shareWA(r.reply)}},"\u{1F4F1} WA"));
+      card.appendChild(acts);
+      ct.appendChild(card);
     });
-    ct.appendChild(stylePick);
-    if(S.sel.length)ct.appendChild(h("button",{style:"display:block;margin:0 auto;padding:12px 32px;background:var(--ac);color:#FFF;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer",onclick:doPx},"\u{1F4CA} Generate PPTX ("+S.sel.length+" articles)"));
-    else ct.appendChild(h("div",{style:"text-align:center;font-size:11px;color:var(--t3)",textContent:"Select articles first, then come back here"}));
-  }
+  }else{ct.appendChild(h("div",{style:"text-align:center;padding:30px;color:var(--t3)"},h("div",{style:"font-size:30px;margin-bottom:8px",textContent:"\u{1F5E3}\uFE0F"}),h("div",{style:"font-size:12px",textContent:"Select articles \u2192 tap \u{1F5E3}\uFE0F Replies to predict client questions"})))}
   ct.appendChild(h("button",{style:"display:block;margin:12px auto 0;padding:8px 14px;background:var(--cd);color:var(--t2);border:1px solid var(--bd);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer",onclick:function(){S.tab="news";R()}},"Back"))}
 
 /* ── HISTORY TAB ── */
