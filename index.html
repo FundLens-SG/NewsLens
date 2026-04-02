@@ -314,14 +314,27 @@ async function doLogout(){
 /* ── Server fetch (uses server-stored keys) ── */
 async function doF(){
   if(_notifOK&&Notification.permission==="default"){try{Notification.requestPermission()}catch(e){}}
-  S.ld=true;S.fErr="";S.news={};R();startT();
-  try{
-    var d=await api("/fetch","POST");
-    if(d.news){var dn=dedup(d.news);Object.keys(dn).forEach(function(k){S.news[k]=dn[k]||[];(S.news[k]).forEach(function(x){x._c=k})});checkFetchNotifs(dn);
-    /* Cache for offline */
-    try{sS("newsCache",JSON.stringify(S.news))}catch(e){}}
-  }catch(e){S.fErr=e.message}
-  S.ld=false;stopT();R();
+  S.ld=true;S.fErr="";S.news={};S._fetchBatch=0;S._fetchTotal=3;R();startT();
+  /* Progressive loading: 3 batches, render each as it arrives */
+  var anyOk=false;
+  for(var b=0;b<3;b++){
+    S._fetchBatch=b+1;R();
+    try{
+      var d=await api("/fetch-batch","POST",{batch:b});
+      if(d.news){
+        var dn=dedup(d.news);
+        Object.keys(dn).forEach(function(k){S.news[k]=dn[k]||[];(S.news[k]).forEach(function(x){x._c=k})});
+        anyOk=true;R();/* Render immediately — user sees articles appear */
+      }
+      if(d.done)break;
+    }catch(e){
+      console.warn("Batch "+b+" failed:",e.message);
+      /* Continue with next batch */
+    }
+  }
+  if(!anyOk)S.fErr="All batches failed. Check your Gemini key or try again.";
+  else{checkFetchNotifs(S.news);try{sS("newsCache",JSON.stringify(S.news))}catch(e){}}
+  S.ld=false;S._fetchBatch=0;stopT();R();
 }
 
 /* Load cached news immediately for instant display */
@@ -712,9 +725,10 @@ if(S.fErr){var errBox=h("div",{style:"padding:10px;background:#1A0F0F;border:1px
   errBox.appendChild(document.createTextNode("\u26A0\uFE0F "+S.fErr));
   errBox.appendChild(h("button",{style:"display:block;margin-top:6px;padding:6px 14px;background:#5C2020;color:#FFF;border:none;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer",onclick:doF},"\u{1F504} Retry Fetch"));
   ct.appendChild(errBox)}
-if(S.ld){/* Skeleton loading */
-  for(var sk=0;sk<4;sk++){var skel=h("div",{className:"skel"});skel.appendChild(h("div",{className:"skel-line w40"}));skel.appendChild(h("div",{className:"skel-line w80"}));skel.appendChild(h("div",{className:"skel-line w60"}));ct.appendChild(skel)}
-  ct.appendChild(h("div",{style:"text-align:center;font-size:11px;color:var(--t2);margin-top:8px"},"\u{1F43E} Fetching + enriching..."+tS))}
+if(S.ld){/* Skeleton loading with batch progress */
+  var batchTxt=S._fetchBatch?("Batch "+S._fetchBatch+"/"+S._fetchTotal):"Starting";
+  for(var sk=0;sk<3;sk++){var skel=h("div",{className:"skel"});skel.appendChild(h("div",{className:"skel-line w40"}));skel.appendChild(h("div",{className:"skel-line w80"}));skel.appendChild(h("div",{className:"skel-line w60"}));ct.appendChild(skel)}
+  ct.appendChild(h("div",{style:"text-align:center;font-size:11px;color:var(--t2);margin-top:8px"},"\u{1F43E} "+batchTxt+" \u2014 articles appear as they arrive..."+tS))}
 
 /* Weekly Digest banner */
 if(S.weeklyDigest&&S.weeklyDigest.digest){
@@ -900,6 +914,7 @@ function rCard(parent,it){
   var ac=it.audience==="pre_retiree"?"b-pr":it.audience==="retiree"?"b-rt":it.audience==="hnw"?"b-hw":"b-al";
   badges.appendChild(h("span",{className:"badge "+ac},{pre_retiree:"Pre-Retiree",retiree:"Retiree",hnw:"HNW",all:"All Clients"}[it.audience]||"All"));
   if(it.source)badges.appendChild(h("span",{className:"badge b-sr"},it.source));
+  if(it.verified)badges.appendChild(h("span",{style:"font-size:8px;color:#22C55E;font-weight:700"},"\u2705"));
   badges.appendChild(h("span",{style:"font-size:8px;color:var(--t3);margin-left:auto"},readTime(it.summary)));
   var cat=CATS.find(function(c){return c.id===it._c});
   if(S.sortMode==="priority"&&cat)badges.appendChild(h("span",{style:"font-size:8px;color:var(--t3)"},cat.emoji));
@@ -909,8 +924,9 @@ function rCard(parent,it){
   var btmRow=h("div",{style:"display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap"});
   if(it.key_figures)btmRow.appendChild(h("span",{style:"padding:3px 7px;background:var(--sf);border-radius:4px;font-size:10.5px;color:var(--t2)"},"\u{1F4C8} "+it.key_figures));
   btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(124,58,237,0.15);color:#A78BFA;border:1px solid rgba(124,58,237,0.3);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();S._askItem=it;S._askChat=[];S._askInput="";S.showAsk=true;R()}},"\u{1F4AC} Ask"));
-  if(it.url){btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(14,165,233,0.1);color:var(--ac);border:1px solid rgba(14,165,233,0.2);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(it.url,"_blank")}},"\u{1F517} Source"))}
-  else if(it.title&&it.source){var searchUrl="https://www.google.com/search?q="+encodeURIComponent(it.title+" "+it.source);btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(14,165,233,0.1);color:var(--ac);border:1px solid rgba(14,165,233,0.2);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(searchUrl,"_blank")}},"\u{1F50D} Find"))}
+  if(it.url&&it.verified){btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(34,197,94,0.15);color:#22C55E;border:1px solid rgba(34,197,94,0.3);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(it.url,"_blank")}},"\u2705 Source"))}
+  else if(it.url){btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(14,165,233,0.1);color:var(--ac);border:1px solid rgba(14,165,233,0.2);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(it.url,"_blank")}},"\u{1F517} Source"))}
+  else{var sq="https://www.google.com/search?q="+encodeURIComponent((it.title||"")+" "+(it.source||""));btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(14,165,233,0.1);color:var(--ac);border:1px solid rgba(14,165,233,0.2);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(sq,"_blank")}},"\u{1F50D} Find"))}
   card.appendChild(btmRow);
   parent.appendChild(card)}
 
