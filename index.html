@@ -195,10 +195,34 @@ function sendNotif(type,title,body){
 }
 
 function testNotif(){
-  reqNotifPerm(function(ok){
-    if(ok){sendNotif("fetch","\u{1F43E} NewsLens Test","Notifications are working! You'll receive alerts here.")}
-    else{alert("Notifications are blocked. Please enable them in your browser settings.\n\niPhone: Add to Home Screen first, then Settings \u2192 NewsLens \u2192 Notifications")}
-  });
+  updateNotifStatus();
+  if(_notifStatus==="unsupported"){alert("Notifications not supported. Use Chrome or add to Home Screen on iPhone.");return}
+  if(_notifStatus==="denied"){alert("Notifications BLOCKED by your browser.\n\nTo fix:\nChrome: Click the lock icon next to the URL \u2192 Site settings \u2192 Notifications \u2192 Allow\nSafari: Settings \u2192 Websites \u2192 Notifications");return}
+  if(_notifStatus==="default"){
+    Notification.requestPermission().then(function(p){
+      updateNotifStatus();R();
+      if(p==="granted"){doTestNotif()}
+      else{alert("You need to tap 'Allow' when the browser asks. Try again.")}
+    });
+    return;
+  }
+  doTestNotif();
+}
+function doTestNotif(){
+  try{
+    if(navigator.serviceWorker&&navigator.serviceWorker.controller){
+      navigator.serviceWorker.ready.then(function(reg){
+        reg.showNotification("\u{1F43E} NewsLens Test",{body:"Notifications are working! You'll receive alerts here.",icon:"icon-192.png",badge:"icon-192.png",tag:"newslens-test"});
+      }).catch(function(e){
+        /* SW notification failed, try direct */
+        try{new Notification("\u{1F43E} NewsLens Test",{body:"Notifications working (direct mode)",icon:"icon-192.png"})}
+        catch(e2){alert("Notification failed: "+e2.message)}
+      });
+    }else{
+      /* No SW controller, use direct notification */
+      new Notification("\u{1F43E} NewsLens Test",{body:"Notifications working! (SW not active yet \u2014 refresh page)",icon:"icon-192.png"});
+    }
+  }catch(e){alert("Notification error: "+e.message)}
 }
 
 function checkDigestNotif(dg){
@@ -905,16 +929,15 @@ if(newsArea&&S.tab==="news"&&!newsArea._ptrBound){
 }
 
 function rCard(parent,it){
-  var sel=!!S.sel.find(function(a){return a.title===a.title&&a.title===it.title});
+  var sel=!!S.sel.find(function(x){return x.title===it.title});
   var impLc=(it.impact||"").toLowerCase();
-  var card=h("div",{className:"card"+(sel?" sel":""),onclick:function(){togA(it)}});
+  var card=h("div",{className:"card"+(sel?" sel":""),onclick:function(e){if(e.target.tagName==="BUTTON"||e.target.tagName==="A")return;togA(it)}});
   if(sel)card.appendChild(h("div",{style:"position:absolute;top:7px;right:10px;color:var(--ac);font-weight:700",textContent:"\u2713"}));
   var badges=h("div",{style:"display:flex;gap:4px;margin-bottom:4px;flex-wrap:wrap;align-items:center"});
   badges.appendChild(h("span",{className:"badge "+(impLc==="high"?"b-hi":impLc==="low"?"b-lo":"b-md")},impLc.toUpperCase()));
   var ac=it.audience==="pre_retiree"?"b-pr":it.audience==="retiree"?"b-rt":it.audience==="hnw"?"b-hw":"b-al";
   badges.appendChild(h("span",{className:"badge "+ac},{pre_retiree:"Pre-Retiree",retiree:"Retiree",hnw:"HNW",all:"All Clients"}[it.audience]||"All"));
   if(it.source)badges.appendChild(h("span",{className:"badge b-sr"},it.source));
-  /* Read time */
   badges.appendChild(h("span",{style:"font-size:8px;color:var(--t3);margin-left:auto"},readTime(it.summary)));
   var cat=CATS.find(function(c){return c.id===it._c});
   if(S.sortMode==="priority"&&cat)badges.appendChild(h("span",{style:"font-size:8px;color:var(--t3)"},cat.emoji));
@@ -923,9 +946,8 @@ function rCard(parent,it){
   card.appendChild(h("div",{style:"font-size:11.5px;color:var(--t2);line-height:1.4"},it.summary));
   var btmRow=h("div",{style:"display:flex;align-items:center;gap:6px;margin-top:5px;flex-wrap:wrap"});
   if(it.key_figures)btmRow.appendChild(h("span",{style:"padding:3px 7px;background:var(--sf);border-radius:4px;font-size:10.5px;color:var(--t2)"},"\u{1F4C8} "+it.key_figures));
-  /* Ask button */
   btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(124,58,237,0.15);color:#A78BFA;border:1px solid rgba(124,58,237,0.3);border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();S._askItem=it;S._askChat=[];S._askInput="";S.showAsk=true;R()}},"\u{1F4AC} Ask"));
-  if(it.url){btmRow.appendChild(h("a",{href:it.url,style:"font-size:10.5px;color:var(--ac);font-weight:600;text-decoration:none;margin-left:auto;padding:3px 8px;background:rgba(14,165,233,0.1);border-radius:4px;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(it.url,"_blank")}},"\u{1F517} Source"))}
+  if(it.url){btmRow.appendChild(h("button",{style:"padding:3px 8px;background:rgba(14,165,233,0.1);color:var(--ac);border:1px solid rgba(14,165,233,0.2);border-radius:4px;font-size:10.5px;font-weight:600;cursor:pointer;white-space:nowrap",onclick:function(e){e.stopPropagation();window.open(it.url,"_blank")}},"\u{1F517} Source"))}
   card.appendChild(btmRow);
   parent.appendChild(card)}
 
