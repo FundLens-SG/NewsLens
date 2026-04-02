@@ -461,6 +461,8 @@ async function askArticle(question){
   S._askLoading=false;S._askInput="";R();
 }
 
+async function doCm(){if(!S.sel.length)return;S.gC=true;S.oE="";S.tab="commentary";R();startT();try{S.comm=await mkComm(S.sel,S.advName);saveHist("Brief",S.comm)}catch(e){S.oE=e.message}S.gC=false;stopT();R()}
+async function doWA(){if(!S.sel.length)return;S.gW=true;S.oE="";S.tab="whatsapp";R();startT();try{S.waM=await mkWA(S.sel,S.tone,S.advName);saveHist("WhatsApp",S.waM)}catch(e){S.oE=e.message}S.gW=false;stopT();R()}
 async function doNL(){if(!S.sel.length)return;S.gP=true;S.oE="";S.tab="pdf";R();startT();try{var c=await genNLContent(S.sel);if(!c)throw new Error("Claude returned empty. Try again.");renderNL(c);saveHist("PDF",c.lead_title+" - "+(c.what_it_means||[]).join("; "))}catch(e){S.oE=e.message}S.gP=false;stopT();R()}
 async function doPx(){if(!S.sel.length)return;S.gX=true;S.oE="";S.tab="pptx";R();startT();try{var c=await mkPptx(S.sel,S.pptxStyle);if(!c)throw new Error("Claude returned empty. Try again.");var p=await buildPptx(c);await p.writeFile({fileName:"Brief_"+new Date().toISOString().slice(0,10)+".pptx"})}catch(e){S.oE=e.message}S.gX=false;stopT();R()}
 
